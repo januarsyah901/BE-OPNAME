@@ -14,6 +14,7 @@ import vehicleRoutes from './routes/vehicleRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import sparepartRoutes from './routes/sparepartRoutes';
 import stockRoutes from './routes/stockRoutes';
+import stockMovementRoutes from './routes/stockMovementRoutes';
 import opnameRoutes from './routes/opnameRoutes';
 import transactionRoutes from './routes/transactionRoutes';
 import reportRoutes from './routes/reportRoutes';
@@ -48,8 +49,8 @@ app.use('/api/v1/customers', customerRoutes);
 app.use('/api/v1/vehicles', vehicleRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/spare-parts', sparepartRoutes);
-app.use('/api/v1/stock', stockRoutes);
-app.use('/api/v1/stock-movements', stockRoutes); // Can map properly later
+app.use('/api/v1/stock', stockRoutes);          // POST /stock/in, POST /stock/out
+app.use('/api/v1/stock-movements', stockMovementRoutes); // GET /stock-movements
 app.use('/api/v1/opnames', opnameRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/reports', reportRoutes);

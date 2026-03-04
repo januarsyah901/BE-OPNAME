@@ -42,6 +42,8 @@ export const createTransaction = async (req: Request, res: Response) => {
         return errorResponse(res, 'VALIDATION_ERROR', 'customer_id, vehicle_id, transaction_date, items wajib diisi', 422);
     }
 
+    const userId = (req as any).user?.id ?? null;
+
     try {
         // Cek stok semua spare part yang digunakan
         for (const item of items) {
@@ -72,11 +74,12 @@ export const createTransaction = async (req: Request, res: Response) => {
             data: {
                 customer_id: Number(customer_id),
                 vehicle_id: Number(vehicle_id),
+                user_id: userId,
                 transaction_date: new Date(transaction_date),
                 total_amount,
                 paid_amount: 0,
                 payment_method: payment_method || 'cash',
-                payment_status: 'pending',
+                payment_status: 'belum_bayar',
                 notes,
                 invoice_number
             }
@@ -109,9 +112,14 @@ export const createTransaction = async (req: Request, res: Response) => {
                     await prisma.stock_movements.create({
                         data: {
                             spare_part_id: Number(item.spare_part_id),
-                            type: 'transaction_out',
+                            user_id: userId,
+                            type: 'keluar',
                             quantity: Number(item.quantity),
-                            note: `Transaksi ${invoice_number}`
+                            stock_before: part.current_stock,
+                            stock_after: part.current_stock - Number(item.quantity),
+                            note: `Transaksi ${invoice_number}`,
+                            reference_id: transaction.id,
+                            reference_type: 'transaction'
                         }
                     });
                 }
