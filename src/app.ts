@@ -31,7 +31,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Swagger UI Documentation
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     customSiteTitle: 'AutoService API Docs',
     swaggerOptions: { persistAuthorization: true }
 }));
@@ -40,11 +40,6 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 app.get('/api/docs.json', (req: Request, res: Response) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(swaggerSpec);
-});
-
-// Root redirect → Swagger Docs
-app.get('/', (req: Request, res: Response) => {
-    res.redirect('/api/docs/');
 });
 
 // Route registrations
