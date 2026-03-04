@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const authMiddleware_1 = require("../middlewares/authMiddleware");
+const sparepartController_1 = require("../controllers/sparepartController");
+const router = (0, express_1.Router)();
+router.use(authMiddleware_1.authenticate);
+router.get('/', sparepartController_1.listSpareParts);
+router.post('/', sparepartController_1.createSparePart);
+router.get('/:id', sparepartController_1.getSparePart);
+router.put('/:id', sparepartController_1.updateSparePart);
+router.delete('/:id', sparepartController_1.deleteSparePart);
+router.get('/:id/barcode', sparepartController_1.getBarcode);
+router.post('/:id/barcode/print', sparepartController_1.printBarcode);
+exports.default = router;

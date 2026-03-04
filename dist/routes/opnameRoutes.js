@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const authMiddleware_1 = require("../middlewares/authMiddleware");
+const opnameController_1 = require("../controllers/opnameController");
+const router = (0, express_1.Router)();
+router.use(authMiddleware_1.authenticate);
+router.get('/', opnameController_1.listOpnames);
+router.post('/', opnameController_1.createOpname);
+router.get('/:id', opnameController_1.getOpname);
+router.post('/:id/items', opnameController_1.addOpnameItem);
+router.put('/:id/items/:item_id', opnameController_1.updateOpnameItem);
+router.post('/:id/close', opnameController_1.closeOpname);
+exports.default = router;
