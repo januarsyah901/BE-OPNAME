@@ -42,6 +42,11 @@ app.get('/api/docs.json', (req: Request, res: Response) => {
     res.send(swaggerSpec);
 });
 
+// Root redirect → Swagger Docs
+app.get('/', (req: Request, res: Response) => {
+    res.redirect('/api/docs/');
+});
+
 // Route registrations
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
