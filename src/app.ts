@@ -20,6 +20,7 @@ import transactionRoutes from './routes/transactionRoutes';
 import reportRoutes from './routes/reportRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import settingRoutes from './routes/settingRoutes';
+import workOrderRoutes from './routes/workOrderRoutes';
 
 const app = express();
 
@@ -89,6 +90,7 @@ app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/settings', settingRoutes);
+app.use('/api/v1/work-orders', workOrderRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response, next: NextFunction) => {
