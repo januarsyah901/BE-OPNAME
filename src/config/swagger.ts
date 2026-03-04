@@ -1,5 +1,9 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 
+const serverUrl = process.env.APP_URL
+    ? `${process.env.APP_URL}/api/v1`
+    : 'http://localhost:3000/api/v1';
+
 const options: swaggerJsdoc.Options = {
     definition: {
         openapi: '3.0.0',
@@ -14,12 +18,8 @@ const options: swaggerJsdoc.Options = {
         },
         servers: [
             {
-                url: 'http://localhost:3000/api/v1',
-                description: 'Local Development'
-            },
-            {
-                url: 'https://api.autoservice.local/api/v1',
-                description: 'Production'
+                url: serverUrl,
+                description: process.env.APP_URL ? 'Production' : 'Local Development'
             }
         ],
         components: {

@@ -24,23 +24,56 @@ import settingRoutes from './routes/settingRoutes';
 const app = express();
 
 // Middleware
-app.use(helmet());
+app.use(
+    helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net"],
+                styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+                imgSrc: ["'self'", "data:", "https:"],
+                connectSrc: ["'self'", "*"],
+                fontSrc: ["'self'", "https:", "data:"],
+                objectSrc: ["'none'"],
+                mediaSrc: ["'self'"],
+                frameSrc: ["'self'"]
+            }
+        },
+        crossOriginEmbedderPolicy: false
+    })
+);
 app.use(cors());
 app.use(morgan('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Swagger UI Documentation
-app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-    customSiteTitle: 'AutoService API Docs',
-    swaggerOptions: { persistAuthorization: true }
-}));
-
-// Expose raw OpenAPI JSON spec
+// Serve raw OpenAPI JSON spec dulu (harus sebelum swagger UI setup)
 app.get('/api/docs.json', (req: Request, res: Response) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(swaggerSpec);
 });
+
+// Swagger UI - gunakan CDN agar bisa jalan di Vercel serverless
+const SWAGGER_UI_VERSION = '5.18.2';
+const CDN_BASE = `https://cdn.jsdelivr.net/npm/swagger-ui-dist@${SWAGGER_UI_VERSION}`;
+
+app.use(
+    '/',
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+        customSiteTitle: 'AutoService API Docs',
+        customCssUrl: `${CDN_BASE}/swagger-ui.css`,
+        customJs: [
+            `${CDN_BASE}/swagger-ui-bundle.js`,
+            `${CDN_BASE}/swagger-ui-standalone-preset.js`
+        ],
+        swaggerOptions: {
+            persistAuthorization: true,
+            url: '/api/docs.json'
+        }
+    })
+);
+
 
 // Route registrations
 app.use('/api/v1/auth', authRoutes);
