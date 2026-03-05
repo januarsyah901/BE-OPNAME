@@ -8,7 +8,7 @@ export const listUsers = async (req: Request, res: Response) => {
     try {
         const data = await prisma.users.findMany({
             where: { deleted_at: null },
-            select: { id: true, name: true, email: true, role: true, created_at: true },
+            select: { id: true, name: true, username: true, role: true, is_active: true, created_at: true },
             orderBy: { id: 'asc' }
         });
         return successResponse(res, data);
@@ -19,19 +19,22 @@ export const listUsers = async (req: Request, res: Response) => {
 
 // POST /users
 export const createUser = async (req: Request, res: Response) => {
-    const { name, email, password, role } = req.body;
-    if (!name || !email || !password || !role) {
-        return errorResponse(res, 'VALIDATION_ERROR', 'name, email, password, role wajib diisi', 422);
+    const { name, username, password, role } = req.body;
+    if (!name || !username || !password || !role) {
+        return errorResponse(res, 'VALIDATION_ERROR', 'name, username, password, role wajib diisi', 422);
     }
 
     try {
         const password_hash = bcrypt.hashSync(password, 10);
         const data = await prisma.users.create({
-            data: { name, email, password_hash, role },
-            select: { id: true, name: true, email: true, role: true }
+            data: { name, username, password_hash, role },
+            select: { id: true, name: true, username: true, role: true }
         });
         return successResponse(res, data, 'User berhasil dibuat', 201);
     } catch (e: any) {
+        if (e.code === 'P2002') {
+            return errorResponse(res, 'CONFLICT', 'Username sudah digunakan', 409);
+        }
         return errorResponse(res, 'SERVER_ERROR', e.message, 500);
     }
 };
@@ -41,7 +44,7 @@ export const getUser = async (req: Request, res: Response) => {
     try {
         const data = await prisma.users.findFirst({
             where: { id: Number(req.params.id), deleted_at: null },
-            select: { id: true, name: true, email: true, role: true, created_at: true }
+            select: { id: true, name: true, username: true, role: true, is_active: true, created_at: true }
         });
         if (!data) return errorResponse(res, 'NOT_FOUND', 'User tidak ditemukan', 404);
         return successResponse(res, data);
@@ -53,9 +56,13 @@ export const getUser = async (req: Request, res: Response) => {
 // PUT /users/:id
 export const updateUser = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, email, role, password } = req.body;
+    const { name, username, role, password, is_active } = req.body;
 
-    const updateData: any = { name, email, role, updated_at: new Date() };
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (username !== undefined) updateData.username = username;
+    if (role !== undefined) updateData.role = role;
+    if (is_active !== undefined) updateData.is_active = is_active;
     if (password) updateData.password_hash = bcrypt.hashSync(password, 10);
 
     try {
@@ -66,10 +73,13 @@ export const updateUser = async (req: Request, res: Response) => {
         const data = await prisma.users.update({
             where: { id: Number(id) },
             data: updateData,
-            select: { id: true, name: true, email: true, role: true }
+            select: { id: true, name: true, username: true, role: true, is_active: true }
         });
         return successResponse(res, data, 'User berhasil diupdate');
     } catch (e: any) {
+        if (e.code === 'P2002') {
+            return errorResponse(res, 'CONFLICT', 'Username sudah digunakan', 409);
+        }
         return errorResponse(res, 'NOT_FOUND', 'User tidak ditemukan', 404);
     }
 };

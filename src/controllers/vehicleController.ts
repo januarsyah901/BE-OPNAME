@@ -42,7 +42,7 @@ export const updateVehicle = async (req: Request, res: Response) => {
     try {
         const data = await prisma.vehicles.update({
             where: { id: Number(id) },
-            data: { plate_number, type, brand, model, year: year ? Number(year) : null, updated_at: new Date() }
+            data: { plate_number, type, brand, model, year: year ? Number(year) : null }
         });
         return successResponse(res, data, 'Kendaraan berhasil diupdate');
     } catch (e: any) {

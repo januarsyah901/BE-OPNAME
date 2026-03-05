@@ -6,17 +6,17 @@ import bcrypt from 'bcryptjs';
 
 export const login = async (req: Request, res: Response) => {
     try {
-        const { email, password } = req.body;
+        const { username, password } = req.body;
 
-        if (!email || !password) {
+        if (!username || !password) {
             return res.status(422).json({
                 success: false,
-                error: { code: 'VALIDATION_ERROR', message: 'Email and password are required' }
+                error: { code: 'VALIDATION_ERROR', message: 'Username and password are required' }
             });
         }
 
         const user = await prisma.users.findFirst({
-            where: { email, deleted_at: null }
+            where: { username, deleted_at: null }
         });
 
         if (!user) {
@@ -37,7 +37,7 @@ export const login = async (req: Request, res: Response) => {
         }
 
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
+            { id: user.id, username: user.username, role: user.role },
             config.jwtSecret || 'supersecretkey',
             { expiresIn: '24h' }
         );
@@ -47,7 +47,7 @@ export const login = async (req: Request, res: Response) => {
             data: {
                 token,
                 expires_in: 86400,
-                user: { id: user.id, name: user.name, role: user.role }
+                user: { id: user.id, name: user.name, username: user.username, role: user.role }
             },
             message: 'OK'
         });
@@ -71,7 +71,7 @@ export const me = async (req: Request, res: Response) => {
 
         const user = await prisma.users.findFirst({
             where: { id: decoded.id, deleted_at: null },
-            select: { id: true, name: true, email: true, role: true }
+            select: { id: true, name: true, username: true, role: true }
         });
 
         if (!user) {

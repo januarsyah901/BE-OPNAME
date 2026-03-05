@@ -30,7 +30,7 @@ export const updateCategory = async (req: Request, res: Response) => {
     try {
         const data = await prisma.categories.update({
             where: { id: Number(id) },
-            data: { name, description, updated_at: new Date() }
+            data: { name, description }
         });
         return successResponse(res, data, 'Kategori berhasil diupdate');
     } catch (e: any) {

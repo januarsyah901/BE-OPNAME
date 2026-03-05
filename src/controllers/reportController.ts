@@ -109,20 +109,20 @@ export const lowStockReport = async (req: Request, res: Response) => {
 // GET /reports/opname/:id
 export const opnameReport = async (req: Request, res: Response) => {
     try {
-        const data = await prisma.opnames.findUnique({
+        const data = await prisma.stock_opnames.findUnique({
             where: { id: Number(req.params.id) },
             include: {
-                opname_items: { include: { spare_parts: { select: { name: true, sku: true } } } }
+                stock_opname_items: { include: { spare_parts: { select: { name: true, sku: true } } } }
             }
         });
 
         if (!data) return errorResponse(res, 'NOT_FOUND', 'Opname tidak ditemukan', 404);
 
-        const items = data.opname_items || [];
+        const items = data.stock_opname_items || [];
         const summary = {
             total_items: items.length,
-            items_with_difference: items.filter((i) => i.physical_count !== null && i.physical_count !== i.system_count).length,
-            items_ok: items.filter((i) => i.physical_count === i.system_count).length
+            items_with_difference: items.filter((i) => i.physical_count !== null && i.physical_count !== i.system_stock).length,
+            items_ok: items.filter((i) => i.physical_count === i.system_stock).length
         };
 
         return successResponse(res, { ...data, summary });

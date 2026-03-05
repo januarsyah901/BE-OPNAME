@@ -125,7 +125,7 @@ export const sendTestNotification = async (req: Request, res: Response) => {
             );
         }
 
-        const settings = await prisma.settings.findFirst();
+        const settings = await prisma.bengkel_profile.findFirst();
         if (!settings?.wa_target_number) {
             return errorResponse(
                 res,

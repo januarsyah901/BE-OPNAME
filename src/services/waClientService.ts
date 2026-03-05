@@ -160,7 +160,7 @@ export const triggerWaNotificationIfNeeded = async (
 
         if (!part || currentStock > part.minimum_stock) return;
 
-        const settings = await prisma.settings.findFirst({
+        const settings = await prisma.bengkel_profile.findFirst({
             select: { wa_target_number: true }
         });
 

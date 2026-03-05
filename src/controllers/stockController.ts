@@ -54,7 +54,7 @@ export const stockIn = async (req: Request, res: Response) => {
         // Update stok
         await prisma.spare_parts.update({
             where: { id: Number(spare_part_id) },
-            data: { current_stock: stockAfter, updated_at: new Date() }
+            data: { current_stock: stockAfter }
         });
 
         // Catat movement dengan stock_before & stock_after
@@ -63,7 +63,7 @@ export const stockIn = async (req: Request, res: Response) => {
                 spare_part_id: Number(spare_part_id),
                 user_id: userId,
                 type: 'masuk',
-                quantity: Number(quantity),
+                quantity_change: Number(quantity),
                 stock_before: stockBefore,
                 stock_after: stockAfter,
                 note,
@@ -108,7 +108,7 @@ export const stockOut = async (req: Request, res: Response) => {
         // Update stok
         await prisma.spare_parts.update({
             where: { id: Number(spare_part_id) },
-            data: { current_stock: stockAfter, updated_at: new Date() }
+            data: { current_stock: stockAfter }
         });
 
         // Catat movement dengan stock_before & stock_after
@@ -117,7 +117,7 @@ export const stockOut = async (req: Request, res: Response) => {
                 spare_part_id: Number(spare_part_id),
                 user_id: userId,
                 type: 'keluar',
-                quantity: Number(quantity),
+                quantity_change: Number(quantity),
                 stock_before: stockBefore,
                 stock_after: stockAfter,
                 note,

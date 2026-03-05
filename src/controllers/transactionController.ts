@@ -85,14 +85,15 @@ export const createTransaction = async (req: Request, res: Response) => {
             }
         });
 
-        // Insert transaction items
+        // Insert transaction items with subtotal
         const itemsToInsert = items.map((item: any) => ({
             transaction_id: transaction.id,
             item_type: item.item_type,
             spare_part_id: item.spare_part_id ? Number(item.spare_part_id) : null,
             item_name: item.item_name,
             quantity: Number(item.quantity),
-            unit_price: Number(item.unit_price)
+            unit_price: Number(item.unit_price),
+            subtotal: Number(item.quantity) * Number(item.unit_price)
         }));
 
         await prisma.transaction_items.createMany({ data: itemsToInsert });
@@ -105,18 +106,19 @@ export const createTransaction = async (req: Request, res: Response) => {
                     select: { current_stock: true }
                 });
                 if (part) {
+                    const newStock = part.current_stock - Number(item.quantity);
                     await prisma.spare_parts.update({
                         where: { id: Number(item.spare_part_id) },
-                        data: { current_stock: part.current_stock - Number(item.quantity) }
+                        data: { current_stock: newStock }
                     });
                     await prisma.stock_movements.create({
                         data: {
                             spare_part_id: Number(item.spare_part_id),
                             user_id: userId,
                             type: 'keluar',
-                            quantity: Number(item.quantity),
+                            quantity_change: Number(item.quantity),
                             stock_before: part.current_stock,
-                            stock_after: part.current_stock - Number(item.quantity),
+                            stock_after: newStock,
                             note: `Transaksi ${invoice_number}`,
                             reference_id: transaction.id,
                             reference_type: 'transaction'
@@ -162,7 +164,7 @@ export const updatePayment = async (req: Request, res: Response) => {
     try {
         const data = await prisma.transactions.update({
             where: { id: Number(id) },
-            data: { paid_amount: Number(paid_amount), payment_status, updated_at: new Date() }
+            data: { paid_amount: Number(paid_amount), payment_status }
         });
         return successResponse(res, data, 'Status pembayaran berhasil diupdate');
     } catch (e: any) {
