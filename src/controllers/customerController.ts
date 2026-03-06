@@ -16,6 +16,7 @@ export const listCustomers = async (req: Request, res: Response) => {
         const [data, total] = await Promise.all([
             prisma.customers.findMany({
                 where,
+                include: { vehicles: true },
                 orderBy: { id: 'asc' },
                 skip: from,
                 take: perPage
