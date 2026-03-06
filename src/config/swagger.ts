@@ -75,12 +75,12 @@ const options: swaggerJsdoc.Options = {
                 // ────────────── User ──────────────
                 UserRequest: {
                     type: 'object',
-                    required: ['name', 'email', 'password', 'role'],
+                    required: ['name', 'username', 'password', 'role'],
                     properties: {
                         name: { type: 'string', example: 'Budi Mekanik' },
-                        email: { type: 'string', format: 'email', example: 'budi@bengkel.com' },
+                        username: { type: 'string', example: 'budi_mekanik' },
                         password: { type: 'string', example: 'password123' },
-                        role: { type: 'string', enum: ['admin', 'mekanik'], example: 'mekanik' }
+                        role: { type: 'string', enum: ['admin', 'mekanik', 'kasir'], example: 'mekanik' }
                     }
                 },
                 // ────────────── Customer ──────────────
@@ -194,7 +194,49 @@ const options: swaggerJsdoc.Options = {
                     required: ['paid_amount', 'payment_status'],
                     properties: {
                         paid_amount: { type: 'number', example: 215000 },
-                        payment_status: { type: 'string', enum: ['pending', 'lunas', 'sebagian'], example: 'lunas' }
+                        payment_status: { type: 'string', enum: ['belum_bayar', 'lunas', 'sebagian'], example: 'lunas' }
+                    }
+                },
+                // ────────────── Work Order ──────────────
+                WorkOrderRequest: {
+                    type: 'object',
+                    required: ['customer_id', 'vehicle_id', 'layanan'],
+                    properties: {
+                        customer_id: { type: 'integer', example: 1 },
+                        vehicle_id: { type: 'integer', example: 1 },
+                        layanan: { type: 'string', example: 'Ganti Oli + Tune Up' },
+                        keluhan: { type: 'string', example: 'Mesin bunyi kasar saat pagi hari' },
+                        estimasi_biaya: { type: 'number', example: 350000 },
+                        estimasi_selesai: { type: 'string', example: '2026-03-07' },
+                        menginap: { type: 'boolean', example: false },
+                        mekanik: { type: 'string', example: 'Budi' }
+                    }
+                },
+                WorkOrderStatusRequest: {
+                    type: 'object',
+                    required: ['status'],
+                    properties: {
+                        status: {
+                            type: 'string',
+                            enum: ['menunggu', 'dikerjakan', 'menunggu_sparepart', 'selesai'],
+                            example: 'dikerjakan',
+                            description: 'Status baru work order. Jika berubah ke dikerjakan/selesai, notif WA otomatis terkirim ke pelanggan.'
+                        }
+                    }
+                },
+                AssignMechanicRequest: {
+                    type: 'object',
+                    required: ['mekanik'],
+                    properties: {
+                        mekanik: { type: 'string', example: 'Ahmad Fauzi' }
+                    }
+                },
+                // ────────────── WA Notification ──────────────
+                WaTestRequest: {
+                    type: 'object',
+                    properties: {
+                        phone: { type: 'string', example: '6281234567890', description: 'Nomor tujuan (opsional, default ke wa_target_number di settings)' },
+                        message: { type: 'string', example: 'Halo! Ini pesan test dari AutoService.' }
                     }
                 },
                 // ────────────── Settings ──────────────
@@ -204,8 +246,8 @@ const options: swaggerJsdoc.Options = {
                         name: { type: 'string', example: 'Bengkel AutoService' },
                         address: { type: 'string', example: 'Jl. Raya Bandung No. 99' },
                         phone: { type: 'string', example: '022-123456' },
-                        wa_gateway_token: { type: 'string', example: 'token_fonntes_atau_wablas' },
-                        wa_target_number: { type: 'string', example: '6281234567890' }
+                        logo_url: { type: 'string', example: 'https://cdn.example.com/logo.png' },
+                        wa_target_number: { type: 'string', example: '6281234567890', description: 'Nomor WA penerima notifikasi default (format internasional tanpa +)' }
                     }
                 }
             }
@@ -220,9 +262,10 @@ const options: swaggerJsdoc.Options = {
             { name: 'Spare Parts', description: 'Inventori spare part / barang' },
             { name: 'Stock', description: 'Pergerakan stok (masuk & keluar)' },
             { name: 'Opname', description: 'Sesi stock opname fisik' },
+            { name: 'Work Orders', description: 'Work Order / antrian servis kendaraan' },
             { name: 'Transactions', description: 'Transaksi / nota servis' },
             { name: 'Reports', description: 'Laporan omset & stok' },
-            { name: 'Notifications', description: 'Notifikasi WhatsApp' },
+            { name: 'Notifications', description: 'Notifikasi WhatsApp & manajemen koneksi WA Web.js' },
             { name: 'Settings', description: 'Pengaturan profil bengkel' }
         ],
         paths: {
@@ -598,6 +641,116 @@ const options: swaggerJsdoc.Options = {
                     responses: { 200: { description: 'Sesi ditutup, stok disesuaikan' } }
                 }
             },
+            // ══════════════════ WORK ORDERS ══════════════════
+            '/work-orders': {
+                get: {
+                    tags: ['Work Orders'],
+                    summary: 'List semua work order (paginated)',
+                    parameters: [
+                        { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+                        {
+                            name: 'status', in: 'query',
+                            schema: { type: 'string', enum: ['menunggu', 'dikerjakan', 'menunggu_sparepart', 'selesai'] },
+                            description: 'Filter berdasarkan status'
+                        },
+                        { name: 'date', in: 'query', schema: { type: 'string', format: 'date' }, description: 'Filter berdasarkan tanggal masuk (YYYY-MM-DD)' }
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Daftar work order',
+                            content: {
+                                'application/json': {
+                                    example: {
+                                        success: true,
+                                        data: [{
+                                            id: 1,
+                                            layanan: 'Ganti Oli + Tune Up',
+                                            keluhan: 'Mesin bunyi kasar',
+                                            status: 'menunggu',
+                                            mekanik: 'Budi',
+                                            estimasi_biaya: '350000.00',
+                                            menginap: false,
+                                            waktu_masuk: '2026-03-06T08:00:00.000Z',
+                                            customers: { id: 1, name: 'Andi Susanto', phone: '081234567890' },
+                                            vehicles: { id: 1, plate_number: 'B 1234 XY', type: 'mobil', brand: 'Toyota', model: 'Avanza' }
+                                        }],
+                                        meta: { page: 1, total: 1, per_page: 20 }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                post: {
+                    tags: ['Work Orders'],
+                    summary: 'Buat work order baru',
+                    requestBody: {
+                        required: true,
+                        content: { 'application/json': { schema: { $ref: '#/components/schemas/WorkOrderRequest' } } }
+                    },
+                    responses: {
+                        201: { description: 'Work order berhasil dibuat' },
+                        422: { description: 'Validasi gagal (customer_id / vehicle_id / layanan wajib)', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+                    }
+                }
+            },
+            '/work-orders/{id}': {
+                get: {
+                    tags: ['Work Orders'],
+                    summary: 'Detail work order',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+                    responses: { 200: { description: 'Detail work order beserta data customer & kendaraan' }, 404: { description: 'Work order tidak ditemukan' } }
+                },
+                put: {
+                    tags: ['Work Orders'],
+                    summary: 'Update data work order (layanan, keluhan, estimasi, dll)',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+                    requestBody: {
+                        required: true,
+                        content: { 'application/json': { schema: { $ref: '#/components/schemas/WorkOrderRequest' } } }
+                    },
+                    responses: { 200: { description: 'Work order diupdate' }, 404: { description: 'Work order tidak ditemukan' } }
+                },
+                delete: {
+                    tags: ['Work Orders'],
+                    summary: 'Soft delete work order',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+                    responses: { 200: { description: 'Work order berhasil dihapus (soft delete)' }, 404: { description: 'Work order tidak ditemukan' } }
+                }
+            },
+            '/work-orders/{id}/status': {
+                patch: {
+                    tags: ['Work Orders'],
+                    summary: 'Update status work order',
+                    description: 'Mengubah status work order. Jika status berubah ke `dikerjakan` atau `selesai`, notifikasi WA otomatis dikirimkan ke nomor pelanggan.',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+                    requestBody: {
+                        required: true,
+                        content: { 'application/json': { schema: { $ref: '#/components/schemas/WorkOrderStatusRequest' } } }
+                    },
+                    responses: {
+                        200: { description: 'Status berhasil diubah' },
+                        404: { description: 'Work order tidak ditemukan' },
+                        422: { description: 'Status tidak valid', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+                    }
+                }
+            },
+            '/work-orders/{id}/mechanic': {
+                patch: {
+                    tags: ['Work Orders'],
+                    summary: 'Assign / ganti mekanik untuk work order',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+                    requestBody: {
+                        required: true,
+                        content: { 'application/json': { schema: { $ref: '#/components/schemas/AssignMechanicRequest' } } }
+                    },
+                    responses: {
+                        200: { description: 'Mekanik berhasil ditugaskan' },
+                        404: { description: 'Work order tidak ditemukan' },
+                        422: { description: 'Nama mekanik wajib diisi', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+                    }
+                }
+            },
             // ══════════════════ TRANSACTIONS ══════════════════
             '/transactions': {
                 get: {
@@ -705,14 +858,108 @@ const options: swaggerJsdoc.Options = {
                 get: {
                     tags: ['Notifications'],
                     summary: 'Log semua notifikasi WhatsApp',
-                    responses: { 200: { description: 'Daftar log notif WA' } }
+                    parameters: [
+                        { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+                        { name: 'status', in: 'query', schema: { type: 'string', enum: ['pending', 'sent', 'failed'] }, description: 'Filter berdasarkan status pengiriman' }
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Daftar log notifikasi WA',
+                            content: {
+                                'application/json': {
+                                    example: {
+                                        success: true,
+                                        data: [{
+                                            id: 1,
+                                            wa_number: '6281234567890',
+                                            message_body: 'Stok Oli Mesin 1L menipis (sisa 3 pcs)',
+                                            status: 'sent',
+                                            sent_at: '2026-03-06T08:00:00.000Z',
+                                            created_at: '2026-03-06T07:59:55.000Z'
+                                        }]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/notifications/wa/status': {
+                get: {
+                    tags: ['Notifications'],
+                    summary: 'Cek status koneksi WhatsApp Web.js',
+                    description: 'Mengembalikan status koneksi klien WA Web.js (CONNECTED, QR_REQUIRED, LOADING, DISCONNECTED, dll).',
+                    responses: {
+                        200: {
+                            description: 'Status koneksi WA',
+                            content: {
+                                'application/json': {
+                                    example: {
+                                        success: true,
+                                        data: { status: 'CONNECTED', ready: true }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/notifications/wa/qr': {
+                get: {
+                    tags: ['Notifications'],
+                    summary: 'Ambil QR code untuk scan WhatsApp',
+                    description: 'Mengembalikan QR code dalam format base64 yang perlu di-scan melalui WhatsApp di HP. Hanya tersedia saat status `QR_REQUIRED`.',
+                    responses: {
+                        200: {
+                            description: 'QR code berhasil diambil',
+                            content: {
+                                'application/json': {
+                                    example: {
+                                        success: true,
+                                        data: { qr: 'data:image/png;base64,iVBORw0KGgo...' }
+                                    }
+                                }
+                            }
+                        },
+                        404: { description: 'QR code belum tersedia (klien belum siap atau sudah terhubung)', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+                    }
+                }
+            },
+            '/notifications/wa/restart': {
+                post: {
+                    tags: ['Notifications'],
+                    summary: 'Restart koneksi WhatsApp Web.js',
+                    description: 'Menghentikan dan memulai ulang klien WA Web.js. Gunakan jika koneksi bermasalah atau perlu scan ulang QR.',
+                    responses: {
+                        200: { description: 'Klien WA berhasil di-restart, tunggu QR code baru' }
+                    }
                 }
             },
             '/notifications/wa/test': {
                 post: {
                     tags: ['Notifications'],
-                    summary: 'Kirim notif WA test ke nomor owner',
-                    responses: { 200: { description: 'Notif test terkirim' } }
+                    summary: 'Kirim pesan WA test',
+                    description: 'Mengirim pesan WhatsApp test. Jika `phone` tidak disertakan, pesan dikirim ke `wa_target_number` yang tersimpan di settings bengkel.',
+                    requestBody: {
+                        required: false,
+                        content: { 'application/json': { schema: { $ref: '#/components/schemas/WaTestRequest' } } }
+                    },
+                    responses: {
+                        200: { description: 'Pesan test berhasil dikirim' },
+                        503: { description: 'Klien WA belum terhubung (QR perlu di-scan)', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+                    }
+                }
+            },
+            '/notifications/wa/retry/{id}': {
+                post: {
+                    tags: ['Notifications'],
+                    summary: 'Kirim ulang notifikasi WA yang gagal',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' }, description: 'ID notifikasi dari log wa_notifications' }],
+                    responses: {
+                        200: { description: 'Notifikasi berhasil dikirim ulang' },
+                        404: { description: 'Notifikasi tidak ditemukan', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+                        503: { description: 'Klien WA belum terhubung', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+                    }
                 }
             },
             // ══════════════════ SETTINGS ══════════════════
