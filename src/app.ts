@@ -50,6 +50,7 @@ app.use(
 );
 const allowedOrigins = [
   "https://auto-service-jet.vercel.app",
+  "https://be-opname.vercel.app",
   "http://localhost:3000",
   "http://localhost:3001",
   "http://localhost:5173",
