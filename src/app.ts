@@ -43,10 +43,23 @@ app.use(
         crossOriginEmbedderPolicy: false
     })
 );
+const allowedOrigins = [
+    'https://auto-service-jet.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:4173',
+];
+
 app.use(cors({
-    origin: '*',
+    origin: (origin, callback) => {
+        // Izinkan request tanpa origin (curl, Postman, server-to-server)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error(`CORS: Origin "${origin}" tidak diizinkan`));
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
 }));
 app.use(morgan('dev'));
 app.use(bodyParser.json());
