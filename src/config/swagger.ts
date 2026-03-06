@@ -66,9 +66,9 @@ const options: swaggerJsdoc.Options = {
                 // ────────────── Auth ──────────────
                 LoginRequest: {
                     type: 'object',
-                    required: ['email', 'password'],
+                    required: ['username', 'password'],
                     properties: {
-                        email: { type: 'string', format: 'email', example: 'admin@bengkel.com' },
+                        username: { type: 'string', example: 'admin' },
                         password: { type: 'string', example: 'secret' }
                     }
                 },
@@ -77,10 +77,15 @@ const options: swaggerJsdoc.Options = {
                     type: 'object',
                     required: ['name', 'username', 'password', 'role'],
                     properties: {
-                        name: { type: 'string', example: 'Budi Mekanik' },
-                        username: { type: 'string', example: 'budi_mekanik' },
+                        name: { type: 'string', example: 'Budi Kasir' },
+                        username: { type: 'string', example: 'budi.kasir' },
                         password: { type: 'string', example: 'password123' },
-                        role: { type: 'string', enum: ['admin', 'mekanik', 'kasir'], example: 'mekanik' }
+                        role: {
+                            type: 'string',
+                            enum: ['admin', 'kasir'],
+                            example: 'kasir',
+                            description: 'Role yang dapat dibuat via API. Role owner hanya tersedia via seeder. Admin hanya bisa buat kasir; owner bisa buat admin & kasir.'
+                        }
                     }
                 },
                 // ────────────── Customer ──────────────
@@ -172,15 +177,16 @@ const options: swaggerJsdoc.Options = {
                         customer_id: { type: 'integer', example: 1 },
                         vehicle_id: { type: 'integer', example: 1 },
                         transaction_date: { type: 'string', format: 'date', example: '2026-03-02' },
-                        payment_method: { type: 'string', enum: ['cash', 'transfer', 'debit'], example: 'cash' },
+                        payment_method: { type: 'string', enum: ['cash', 'transfer', 'e-wallet'], example: 'cash' },
                         notes: { type: 'string', example: 'Ganti oli + tune up' },
                         items: {
                             type: 'array',
                             items: {
                                 type: 'object',
+                                required: ['item_type', 'item_name', 'quantity', 'unit_price'],
                                 properties: {
                                     item_type: { type: 'string', enum: ['spare_part', 'jasa'], example: 'spare_part' },
-                                    spare_part_id: { type: 'integer', example: 42 },
+                                    spare_part_id: { type: 'integer', example: 42, description: 'Wajib jika item_type = spare_part' },
                                     item_name: { type: 'string', example: 'Oli Mesin 1L' },
                                     quantity: { type: 'integer', example: 1 },
                                     unit_price: { type: 'number', example: 65000 }
@@ -194,7 +200,12 @@ const options: swaggerJsdoc.Options = {
                     required: ['paid_amount', 'payment_status'],
                     properties: {
                         paid_amount: { type: 'number', example: 215000 },
-                        payment_status: { type: 'string', enum: ['belum_bayar', 'lunas', 'sebagian'], example: 'lunas' }
+                        payment_status: {
+                            type: 'string',
+                            enum: ['lunas', 'dp', 'belum_bayar'],
+                            example: 'lunas',
+                            description: 'lunas = sudah bayar penuh | dp = bayar sebagian (DP) | belum_bayar = belum ada pembayaran'
+                        }
                     }
                 },
                 // ────────────── Work Order ──────────────
@@ -247,7 +258,31 @@ const options: swaggerJsdoc.Options = {
                         address: { type: 'string', example: 'Jl. Raya Bandung No. 99' },
                         phone: { type: 'string', example: '022-123456' },
                         logo_url: { type: 'string', example: 'https://cdn.example.com/logo.png' },
+                        wa_gateway_token: { type: 'string', example: 'token_gateway_jika_pakai_pihak_ketiga', description: 'Token gateway WA pihak ketiga (opsional, tidak dipakai jika memakai WA Web.js)' },
                         wa_target_number: { type: 'string', example: '6281234567890', description: 'Nomor WA penerima notifikasi default (format internasional tanpa +)' }
+                    }
+                },
+                // ────────────── Service Catalog ──────────────
+                ServiceCatalogRequest: {
+                    type: 'object',
+                    required: ['name', 'standard_price', 'berlaku_untuk'],
+                    properties: {
+                        name: { type: 'string', example: 'Ganti Oli & Filter' },
+                        description: { type: 'string', example: 'Penggantian oli mesin dan filter oli' },
+                        kategori: {
+                            type: 'string',
+                            example: 'Mesin',
+                            description: 'Kategori layanan: Mesin | Rem & Transmisi | Kelistrikan | AC & Kabin | Body & Cat | Lainnya'
+                        },
+                        standard_price: { type: 'number', example: 50000 },
+                        durasi_estimasi: { type: 'string', example: '30-45 menit' },
+                        berlaku_untuk: {
+                            type: 'string',
+                            enum: ['mobil', 'motor', 'keduanya'],
+                            example: 'keduanya',
+                            description: 'Jenis kendaraan yang dilayani'
+                        },
+                        garansi: { type: 'string', example: '1 bulan / 1.000 km', description: 'Garansi layanan (opsional)' }
                     }
                 }
             }
@@ -255,7 +290,7 @@ const options: swaggerJsdoc.Options = {
         security: [{ BearerAuth: [] }],
         tags: [
             { name: 'Auth', description: 'Autentikasi & manajemen sesi' },
-            { name: 'Users', description: 'Manajemen pengguna (Admin only)' },
+            { name: 'Users', description: 'Manajemen pengguna (Owner & Admin only)' },
             { name: 'Customers', description: 'Manajemen data customer' },
             { name: 'Vehicles', description: 'Kendaraan milik customer' },
             { name: 'Categories', description: 'Kategori spare part' },
@@ -263,6 +298,7 @@ const options: swaggerJsdoc.Options = {
             { name: 'Stock', description: 'Pergerakan stok (masuk & keluar)' },
             { name: 'Opname', description: 'Sesi stock opname fisik' },
             { name: 'Work Orders', description: 'Work Order / antrian servis kendaraan' },
+            { name: 'Service Catalog', description: 'Katalog jasa / layanan bengkel' },
             { name: 'Transactions', description: 'Transaksi / nota servis' },
             { name: 'Reports', description: 'Laporan omset & stok' },
             { name: 'Notifications', description: 'Notifikasi WhatsApp & manajemen koneksi WA Web.js' },
@@ -561,8 +597,12 @@ const options: swaggerJsdoc.Options = {
                     tags: ['Stock'],
                     summary: 'Log semua pergerakan stok',
                     parameters: [
-                        { name: 'spare_part_id', in: 'query', schema: { type: 'integer' } },
-                        { name: 'type', in: 'query', schema: { type: 'string', enum: ['in', 'out', 'opname_adjustment'] } }
+                        { name: 'spare_part_id', in: 'query', schema: { type: 'integer' }, description: 'Filter berdasarkan spare part tertentu' },
+                        {
+                            name: 'type', in: 'query',
+                            schema: { type: 'string', enum: ['masuk', 'keluar', 'opname_adjustment'] },
+                            description: 'Filter berdasarkan tipe pergerakan'
+                        }
                     ],
                     responses: { 200: { description: 'Daftar log pergerakan stok' } }
                 }
@@ -888,7 +928,7 @@ const options: swaggerJsdoc.Options = {
                 get: {
                     tags: ['Notifications'],
                     summary: 'Cek status koneksi WhatsApp Web.js',
-                    description: 'Mengembalikan status koneksi klien WA Web.js (CONNECTED, QR_REQUIRED, LOADING, DISCONNECTED, dll).',
+                    description: 'Mengembalikan status koneksi klien WA Web.js. Status yang mungkin: `initializing` | `qr_ready` | `authenticated` | `ready` | `disconnected`.',
                     responses: {
                         200: {
                             description: 'Status koneksi WA',
@@ -896,7 +936,10 @@ const options: swaggerJsdoc.Options = {
                                 'application/json': {
                                     example: {
                                         success: true,
-                                        data: { status: 'CONNECTED', ready: true }
+                                        data: {
+                                            status: 'ready',
+                                            qr_expires_at: null
+                                        }
                                     }
                                 }
                             }
@@ -959,6 +1002,100 @@ const options: swaggerJsdoc.Options = {
                         200: { description: 'Notifikasi berhasil dikirim ulang' },
                         404: { description: 'Notifikasi tidak ditemukan', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
                         503: { description: 'Klien WA belum terhubung', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+                    }
+                }
+            },
+            // ══════════════════ SERVICE CATALOG ══════════════════
+            '/service-catalog': {
+                get: {
+                    tags: ['Service Catalog'],
+                    summary: 'List semua jasa / layanan bengkel',
+                    parameters: [
+                        {
+                            name: 'berlaku_untuk', in: 'query',
+                            schema: { type: 'string', enum: ['mobil', 'motor', 'keduanya'] },
+                            description: 'Filter berdasarkan jenis kendaraan'
+                        },
+                        {
+                            name: 'is_active', in: 'query',
+                            schema: { type: 'boolean' },
+                            description: 'Filter berdasarkan status aktif (true/false)'
+                        }
+                    ],
+                    responses: {
+                        200: {
+                            description: 'Daftar layanan',
+                            content: {
+                                'application/json': {
+                                    example: {
+                                        success: true,
+                                        data: [{
+                                            id: 1,
+                                            name: 'Ganti Oli & Filter',
+                                            kategori: 'Mesin',
+                                            standard_price: '50000.00',
+                                            durasi_estimasi: '30-45 menit',
+                                            berlaku_untuk: 'keduanya',
+                                            garansi: '1 bulan / 1.000 km',
+                                            is_active: true
+                                        }]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                post: {
+                    tags: ['Service Catalog'],
+                    summary: 'Tambah jasa / layanan baru',
+                    requestBody: {
+                        required: true,
+                        content: { 'application/json': { schema: { $ref: '#/components/schemas/ServiceCatalogRequest' } } }
+                    },
+                    responses: {
+                        201: { description: 'Layanan berhasil ditambahkan' },
+                        422: { description: 'Validasi gagal', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+                    }
+                }
+            },
+            '/service-catalog/{id}': {
+                put: {
+                    tags: ['Service Catalog'],
+                    summary: 'Update data layanan',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+                    requestBody: {
+                        required: true,
+                        content: { 'application/json': { schema: { $ref: '#/components/schemas/ServiceCatalogRequest' } } }
+                    },
+                    responses: { 200: { description: 'Layanan diupdate' }, 404: { description: 'Layanan tidak ditemukan' } }
+                },
+                delete: {
+                    tags: ['Service Catalog'],
+                    summary: 'Hapus layanan',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+                    responses: { 200: { description: 'Layanan berhasil dihapus' }, 404: { description: 'Layanan tidak ditemukan' } }
+                }
+            },
+            '/service-catalog/{id}/toggle': {
+                patch: {
+                    tags: ['Service Catalog'],
+                    summary: 'Aktifkan / nonaktifkan layanan',
+                    description: 'Toggle field `is_active`. Jika aktif → nonaktif, jika nonaktif → aktif.',
+                    parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+                    responses: {
+                        200: {
+                            description: 'Status layanan berhasil diubah',
+                            content: {
+                                'application/json': {
+                                    example: {
+                                        success: true,
+                                        data: { id: 1, name: 'Ganti Oli & Filter', is_active: false },
+                                        message: 'Layanan berhasil dinonaktifkan'
+                                    }
+                                }
+                            }
+                        },
+                        404: { description: 'Layanan tidak ditemukan', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
                     }
                 }
             },
