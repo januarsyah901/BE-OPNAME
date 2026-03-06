@@ -52,33 +52,22 @@ app.use(morgan('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve raw OpenAPI JSON spec dulu (harus sebelum swagger UI setup)
-app.get('/api/docs.json', (req: Request, res: Response) => {
-    res.setHeader('Content-Type', 'application/json');
-    res.send(swaggerSpec);
-});
-
 // Swagger UI - gunakan CDN agar bisa jalan di Vercel serverless
 const SWAGGER_UI_VERSION = '5.18.2';
 const CDN_BASE = `https://cdn.jsdelivr.net/npm/swagger-ui-dist@${SWAGGER_UI_VERSION}`;
 
-app.use(
-    '/',
-    swaggerUi.serve,
-    swaggerUi.setup(swaggerSpec, {
-        customSiteTitle: 'AutoService API Docs',
-        customCssUrl: `${CDN_BASE}/swagger-ui.css`,
-        customJs: [
-            `${CDN_BASE}/swagger-ui-bundle.js`,
-            `${CDN_BASE}/swagger-ui-standalone-preset.js`
-        ],
-        swaggerOptions: {
-            persistAuthorization: true,
-            url: '/api/docs.json'
-        }
-    })
-);
-
+const swaggerSetup = swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: 'AutoService API Docs',
+    customCssUrl: `${CDN_BASE}/swagger-ui.css`,
+    customJs: [
+        `${CDN_BASE}/swagger-ui-bundle.js`,
+        `${CDN_BASE}/swagger-ui-standalone-preset.js`
+    ],
+    swaggerOptions: {
+        persistAuthorization: true,
+        url: '/api/docs.json'
+    }
+});
 
 // Route registrations
 app.use('/api/v1/auth', authRoutes);
@@ -95,6 +84,18 @@ app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/settings', settingRoutes);
 app.use('/api/v1/work-orders', workOrderRoutes);
+
+// Swagger UI & raw spec — di-mount SETELAH semua route API
+// agar swagger-ui-express serve middleware tidak menginterceptor request API
+app.get('/api/docs.json', (req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+});
+app.use('/api/docs', swaggerUi.serve, swaggerSetup);
+// Redirect root → /api/docs untuk kemudahan akses
+app.get('/', (_req: Request, res: Response) => {
+    res.redirect('/api/docs');
+});
 
 // 404 handler
 app.use((req: Request, res: Response, next: NextFunction) => {
