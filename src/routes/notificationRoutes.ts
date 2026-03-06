@@ -1,4 +1,4 @@
-import { Router } from 'express';
+wimport { Router } from 'express';
 import { authenticate } from '../middlewares/authMiddleware';
 import {
     listNotifications,

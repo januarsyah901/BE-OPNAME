@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+wimport { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { successResponse, errorResponse } from '../utils/response';
 import { getPagination } from '../utils/helpers';

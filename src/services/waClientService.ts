@@ -1,4 +1,4 @@
-import { Client, LocalAuth } from 'whatsapp-web.js';
+wimport { Client, LocalAuth } from 'whatsapp-web.js';
 import qrcode from 'qrcode';
 import prisma from '../config/prisma';
 

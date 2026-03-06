@@ -44,10 +44,11 @@ app.use(
     })
 );
 const allowedOrigins = [
-    'https://auto-service-jet.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://localhost:4173',
+    // 'https://auto-service-jet.vercel.app',
+    // 'http://localhost:3000',
+    // 'http://localhost:5173',
+    // 'http://localhost:4173',
+    '*'
 ];
 
 app.use(cors({
