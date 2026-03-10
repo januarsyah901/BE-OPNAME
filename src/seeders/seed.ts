@@ -700,6 +700,52 @@ async function seedTransactions() {
 // ─────────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────────
+async function seedVehicleMasters() {
+  const masters = [
+    { brand: "Toyota", model: "Avanza" },
+    { brand: "Toyota", model: "Innova" },
+    { brand: "Toyota", model: "Fortuner" },
+    { brand: "Toyota", model: "Rush" },
+    { brand: "Toyota", model: "Calya" },
+    { brand: "Toyota", model: "Agya" },
+    { brand: "Honda", model: "Brio" },
+    { brand: "Honda", model: "Mobilio" },
+    { brand: "Honda", model: "HR-V" },
+    { brand: "Honda", model: "CR-V" },
+    { brand: "Honda", model: "Jazz" },
+    { brand: "Honda", model: "Civic" },
+    { brand: "Honda", model: "PCX" },
+    { brand: "Honda", model: "Vario" },
+    { brand: "Honda", model: "Beat" },
+    { brand: "Yamaha", model: "NMAX" },
+    { brand: "Yamaha", model: "Aerox" },
+    { brand: "Yamaha", model: "Lexi" },
+    { brand: "Yamaha", model: "Vixion" },
+    { brand: "Yamaha", model: "Mio" },
+    { brand: "Suzuki", model: "Ertiga" },
+    { brand: "Suzuki", model: "XL7" },
+    { brand: "Daihatsu", model: "Xenia" },
+    { brand: "Daihatsu", model: "Terios" },
+    { brand: "Daihatsu", model: "Sigra" },
+    { brand: "Daihatsu", model: "Ayla" },
+    { brand: "Mitsubishi", model: "Xpander" },
+    { brand: "Mitsubishi", model: "Pajero Sport" },
+  ];
+
+  for (const m of masters) {
+    try {
+      await prisma.vehicle_masters.upsert({
+        where: { brand_model: { brand: m.brand, model: m.model } },
+        update: {},
+        create: m,
+      });
+    } catch (e: any) {
+      err(`VehicleMaster: ${m.brand} ${m.model}`, e);
+    }
+  }
+  log("Vehicle Masters");
+}
+
 async function main() {
   console.log("\n🌱 Memulai proses seeding database AutoService...\n");
 
@@ -708,6 +754,7 @@ async function main() {
   await seedCategories();
   await seedSpareParts();
   await seedCustomers();
+  await seedVehicleMasters();
   await seedVehicles();
   await seedServiceCatalog();
   await seedTransactions();

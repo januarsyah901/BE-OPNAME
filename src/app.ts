@@ -5,8 +5,6 @@ import morgan from "morgan";
 import bodyParser from "body-parser";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./config/swagger";
-
-// Import Routes
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
 import customerRoutes from "./routes/customerRoutes";
@@ -21,10 +19,10 @@ import reportRoutes from "./routes/reportRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import settingRoutes from "./routes/settingRoutes";
 import workOrderRoutes from "./routes/workOrderRoutes";
+import vehicleMasterRoutes from "./routes/vehicleMasterRoutes";
+import serviceCatalogRoutes from "./routes/serviceCatalogRoutes";
 
 const app = express();
-
-// Middleware
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -60,7 +58,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Izinkan request tanpa origin (curl, Postman, server-to-server)
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       callback(new Error(`CORS: Origin "${origin}" tidak diizinkan`));
@@ -73,8 +70,6 @@ app.use(
 app.use(morgan("dev"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-// Swagger UI - gunakan CDN agar bisa jalan di Vercel serverless
 const SWAGGER_UI_VERSION = "5.18.2";
 const CDN_BASE = `https://cdn.jsdelivr.net/npm/swagger-ui-dist@${SWAGGER_UI_VERSION}`;
 
@@ -91,35 +86,34 @@ const swaggerSetup = swaggerUi.setup(swaggerSpec, {
   },
 });
 
-// Route registrations
+console.log("Registering routes...");
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/customers", customerRoutes);
 app.use("/api/v1/vehicles", vehicleRoutes);
 app.use("/api/v1/categories", categoryRoutes);
 app.use("/api/v1/spare-parts", sparepartRoutes);
-app.use("/api/v1/stock", stockRoutes); // POST /stock/in, POST /stock/out
-app.use("/api/v1/stock-movements", stockMovementRoutes); // GET /stock-movements
+app.use("/api/v1/stock", stockRoutes); 
+app.use("/api/v1/stock-movements", stockMovementRoutes);
 app.use("/api/v1/opnames", opnameRoutes);
 app.use("/api/v1/transactions", transactionRoutes);
 app.use("/api/v1/reports", reportRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/settings", settingRoutes);
 app.use("/api/v1/work-orders", workOrderRoutes);
+app.use("/api/v1/vehicle-masters", vehicleMasterRoutes);
+app.use("/api/v1/service-catalog", serviceCatalogRoutes);
+console.log("Routes registered at /api/v1/service-catalog");
 
-// Swagger UI & raw spec — di-mount SETELAH semua route API
-// agar swagger-ui-express serve middleware tidak menginterceptor request API
 app.get("/api/docs.json", (req: Request, res: Response) => {
   res.setHeader("Content-Type", "application/json");
   res.send(swaggerSpec);
 });
 app.use("/api/docs", swaggerUi.serve, swaggerSetup);
-// Redirect root → /api/docs untuk kemudahan akses
 app.get("/", (_req: Request, res: Response) => {
   res.redirect("/api/docs");
 });
 
-// 404 handler
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.status(404).json({
     success: false,
@@ -130,7 +124,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-// Global Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err);
   res.status(err.status || 500).json({

@@ -54,18 +54,77 @@ export const createWorkOrder = async (req: Request, res: Response) => {
         estimasi_biaya,
         estimasi_selesai,
         menginap,
-        mekanik
+        mekanik,
+        noPolisi,
+        tipe,
+        kendaraan,
+        pelanggan,
+        waPelanggan
     } = req.body;
 
-    if (!customer_id || !vehicle_id || !layanan) {
-        return errorResponse(res, 'VALIDATION_ERROR', 'customer_id, vehicle_id, dan layanan wajib diisi', 422);
+    if (!layanan) {
+        return errorResponse(res, 'VALIDATION_ERROR', 'Layanan wajib diisi', 422);
     }
 
     try {
+        let finalCustomerId = customer_id ? Number(customer_id) : null;
+        let finalVehicleId = vehicle_id ? Number(vehicle_id) : null;
+        if (!finalCustomerId && pelanggan) {
+            const existingCustomer = await prisma.customers.findFirst({
+                where: { 
+                    name: String(pelanggan),
+                    ...(waPelanggan && { phone: String(waPelanggan) }),
+                    deleted_at: null 
+                }
+            });
+
+            if (existingCustomer) {
+                finalCustomerId = existingCustomer.id;
+            } else {
+                const newCustomer = await prisma.customers.create({
+                    data: { 
+                        name: String(pelanggan), 
+                        phone: waPelanggan ? String(waPelanggan) : null 
+                    }
+                });
+                finalCustomerId = newCustomer.id;
+            }
+        }
+
+        if (!finalVehicleId && noPolisi) {
+            const plate = String(noPolisi).toUpperCase().replace(/\s/g, '');
+            const existingVehicle = await prisma.vehicles.findFirst({
+                where: { plate_number: plate }
+            });
+
+            if (existingVehicle) {
+                finalVehicleId = existingVehicle.id;
+            } else if (finalCustomerId) {
+                const parts = String(kendaraan || '').split(' ');
+                const brand = parts[0] || 'Unknown';
+                const model = parts.slice(1).join(' ') || 'Unit';
+
+                const newVehicle = await prisma.vehicles.create({
+                    data: {
+                        customer_id: finalCustomerId,
+                        plate_number: plate,
+                        type: String(tipe || 'Mobil'),
+                        brand,
+                        model
+                    }
+                });
+                finalVehicleId = newVehicle.id;
+            }
+        }
+
+        if (!finalCustomerId || !finalVehicleId) {
+            return errorResponse(res, 'VALIDATION_ERROR', 'Gagal memproses data Pelanggan atau Kendaraan. Pastikan nama dan plat nomor terisi.', 422);
+        }
+
         const wo = await prisma.work_orders.create({
             data: {
-                customer_id: Number(customer_id),
-                vehicle_id: Number(vehicle_id),
+                customer_id: finalCustomerId,
+                vehicle_id: finalVehicleId,
                 layanan: String(layanan),
                 keluhan: keluhan ?? null,
                 status: 'menunggu',
@@ -148,7 +207,6 @@ export const updateWorkOrder = async (req: Request, res: Response) => {
 
 // ===========================================================================
 // PATCH /work-orders/:id/status
-// Update status + trigger notif WA ke pelanggan jika status = "dikerjakan" / "selesai"
 // ===========================================================================
 export const updateWorkOrderStatus = async (req: Request, res: Response) => {
     const { id } = req.params;
@@ -179,13 +237,10 @@ export const updateWorkOrderStatus = async (req: Request, res: Response) => {
             where: { id: Number(id) },
             data: { status }
         });
-
-        // Trigger notif WA ke pelanggan saat status berubah ke dikerjakan / selesai
         if (
             (status === 'dikerjakan' || status === 'selesai') &&
             wo.customers?.phone
         ) {
-            // Tidak di-await agar tidak blocking response
             sendServiceProgressNotification(
                 wo.customers.phone,
                 wo.vehicles?.plate_number ?? 'N/A',
