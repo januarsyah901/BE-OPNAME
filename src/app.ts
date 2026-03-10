@@ -86,7 +86,6 @@ const swaggerSetup = swaggerUi.setup(swaggerSpec, {
   },
 });
 
-console.log("Registering routes...");
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/customers", customerRoutes);
@@ -103,8 +102,6 @@ app.use("/api/v1/settings", settingRoutes);
 app.use("/api/v1/work-orders", workOrderRoutes);
 app.use("/api/v1/vehicle-masters", vehicleMasterRoutes);
 app.use("/api/v1/service-catalog", serviceCatalogRoutes);
-console.log("Routes registered at /api/v1/service-catalog");
-
 app.get("/api/docs.json", (req: Request, res: Response) => {
   res.setHeader("Content-Type", "application/json");
   res.send(swaggerSpec);
