@@ -39,14 +39,14 @@ export const login = async (req: Request, res: Response) => {
         const token = jwt.sign(
             { id: user.id, username: user.username, role: user.role },
             config.jwtSecret || 'supersecretkey',
-            { expiresIn: '24h' }
+            { expiresIn: '30d' }
         );
 
         return res.status(200).json({
             success: true,
             data: {
                 token,
-                expires_in: 86400,
+                expires_in: 2592000,
                 user: { id: user.id, name: user.name, username: user.username, role: user.role }
             },
             message: 'OK'
