@@ -7,6 +7,7 @@ import {
   restartWa,
   sendTestNotification,
   retryNotification,
+  clearNotifications,
 } from "../controllers/notificationController";
 
 const router = Router();
@@ -15,6 +16,7 @@ router.use(authenticate);
 
 // Log notifikasi WA
 router.get("/wa", listNotifications);
+router.delete("/wa", clearNotifications);
 
 // WA Client management (WhatsApp Web.js)
 router.get("/wa/status", getWaClientStatus);

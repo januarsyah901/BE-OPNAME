@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -33,6 +34,18 @@ model bengkel_profile {
   logo_url         String?
   wa_gateway_token String?
   wa_target_number String?   @db.VarChar(50)
+  wa_bot_enabled   Boolean   @default(true)
+  wa_template_stok       String? @db.Text
+  wa_template_dikerjakan String? @db.Text
+  wa_template_selesai    String? @db.Text
+  wa_gateway_status    String?   @default("disconnected") @db.VarChar(50)
+  wa_gateway_qr        String?   @db.Text
+  wa_bot_name          String?   @db.VarChar(150)
+  wa_bot_number        String?   @db.VarChar(50)
+  wa_bot_avatar        String?   @db.Text
+  open_time        String?   @db.VarChar(10)
+  close_time       String?   @db.VarChar(10)
+  operational_days String?   @db.VarChar(50)
   updated_at       DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
 }
 

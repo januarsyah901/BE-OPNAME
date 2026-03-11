@@ -16,7 +16,7 @@ export const getServiceCatalog = async (req: Request, res: Response) => {
 
 export const createServiceCatalog = async (req: Request, res: Response) => {
   try {
-    const { name, description, kategori, standard_price, berlaku_untuk } = req.body;
+    const { name, description, kategori, standard_price, berlaku_untuk, durasi_estimasi, garansi } = req.body;
     
     if (!name) {
       return errorResponse(res, "VALIDATION_ERROR", "Nama layanan wajib diisi", 400);
@@ -29,6 +29,8 @@ export const createServiceCatalog = async (req: Request, res: Response) => {
         kategori,
         standard_price: standard_price || 0,
         berlaku_untuk: berlaku_untuk || "keduanya",
+        durasi_estimasi,
+        garansi,
       },
     });
 
@@ -41,7 +43,7 @@ export const createServiceCatalog = async (req: Request, res: Response) => {
 export const updateServiceCatalog = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, description, kategori, standard_price, berlaku_untuk, is_active } = req.body;
+    const { name, description, kategori, standard_price, berlaku_untuk, is_active, durasi_estimasi, garansi } = req.body;
 
     const data = await prisma.service_catalog.update({
       where: { id: Number(id) },
@@ -52,6 +54,8 @@ export const updateServiceCatalog = async (req: Request, res: Response) => {
         standard_price: standard_price !== undefined ? standard_price : undefined,
         berlaku_untuk,
         is_active,
+        durasi_estimasi,
+        garansi,
       },
     });
 

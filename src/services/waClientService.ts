@@ -2,15 +2,6 @@ import { Client, LocalAuth } from "whatsapp-web.js";
 import qrcode from "qrcode";
 import prisma from "../config/prisma";
 
-/**
- * WA Web.js Client Service
- *
- * Mengelola satu instance WhatsApp Web client (singleton).
- * - QR digenerate saat pertama kali inisialisasi
- * - Session disimpan ke disk via LocalAuth agar tidak perlu scan ulang
- * - Menyediakan fungsi sendMessage() untuk kirim pesan WA
- */
-
 type ClientStatus =
   | "initializing"
   | "qr_ready"
@@ -23,16 +14,33 @@ let clientStatus: ClientStatus = "initializing";
 let lastQrBase64: string | null = null;
 let lastQrExpiresAt: Date | null = null;
 
-const QR_TIMEOUT_MS = 2 * 60 * 1000; // QR valid 2 menit
+const QR_TIMEOUT_MS = 2 * 60 * 1000; 
 
-/**
- * Inisialisasi WA client (dipanggil saat server startup).
- * Idempotent — jika sudah di-init, langsung return.
- */
+const updateDbState = async (
+  status: ClientStatus,
+  qr: string | null = null,
+  botInfo: { name?: string | null; number?: string | null; avatar?: string | null } = {}
+) => {
+  try {
+    await prisma.bengkel_profile.updateMany({
+      data: {
+        wa_gateway_status: status,
+        wa_gateway_qr: qr,
+        wa_bot_name: botInfo.name,
+        wa_bot_number: botInfo.number,
+        wa_bot_avatar: botInfo.avatar,
+      },
+    });
+  } catch (err) {
+    console.error("[WA] Failed to update DB state:", err);
+  }
+};
+
 export const initWaClient = (): void => {
   if (waClient) return;
 
   console.log("[WA] Initializing WhatsApp Web client...");
+  updateDbState("initializing");
 
   waClient = new Client({
     authStrategy: new LocalAuth({
@@ -50,6 +58,7 @@ export const initWaClient = (): void => {
     lastQrExpiresAt = new Date(Date.now() + QR_TIMEOUT_MS);
     try {
       lastQrBase64 = await qrcode.toDataURL(qr);
+      updateDbState("qr_ready", lastQrBase64);
     } catch (err) {
       console.error("[WA] Failed to convert QR to base64:", err);
     }
@@ -60,11 +69,26 @@ export const initWaClient = (): void => {
     clientStatus = "authenticated";
     lastQrBase64 = null;
     lastQrExpiresAt = null;
+    updateDbState("authenticated", null);
   });
 
-  waClient.on("ready", () => {
+  waClient.on("ready", async () => {
     console.log("[WA] Client is ready!");
     clientStatus = "ready";
+    
+    // Ambil info bot
+    let avatarUrl = null;
+    try {
+      if (waClient?.info.wid) {
+        avatarUrl = await waClient.getProfilePicUrl(waClient.info.wid._serialized);
+      }
+    } catch (e) {}
+
+    updateDbState("ready", null, {
+      name: waClient?.info.pushname,
+      number: waClient?.info.wid.user,
+      avatar: avatarUrl
+    });
   });
 
   waClient.on("disconnected", (reason) => {
@@ -72,24 +96,24 @@ export const initWaClient = (): void => {
     clientStatus = "disconnected";
     waClient = null;
     lastQrBase64 = null;
+    updateDbState("disconnected", null, { name: null, number: null, avatar: null });
   });
 
   waClient.on("auth_failure", (msg) => {
     console.error("[WA] Auth failure:", msg);
     clientStatus = "disconnected";
     waClient = null;
+    updateDbState("disconnected", null, { name: null, number: null, avatar: null });
   });
 
   clientStatus = "initializing";
   waClient.initialize().catch((err) => {
     console.error("[WA] Initialize error:", err);
     clientStatus = "disconnected";
+    updateDbState("disconnected", null, { name: null, number: null, avatar: null });
   });
 };
 
-/**
- * Re-inisialisasi client (untuk keperluan restart / logout).
- */
 export const restartWaClient = (): void => {
   if (waClient) {
     waClient.destroy().catch(() => {});
@@ -98,12 +122,10 @@ export const restartWaClient = (): void => {
   clientStatus = "initializing";
   lastQrBase64 = null;
   lastQrExpiresAt = null;
+  updateDbState("initializing", null, { name: null, number: null, avatar: null });
   initWaClient();
 };
 
-/**
- * Ambil status koneksi WA client saat ini.
- */
 export const getWaStatus = (): {
   status: ClientStatus;
   qr_expires_at: Date | null;
@@ -114,10 +136,37 @@ export const getWaStatus = (): {
   };
 };
 
-/**
- * Ambil QR base64 (data URL) untuk ditampilkan di frontend.
- * Returns null jika belum ada QR atau sudah expired/authenticated.
- */
+export const getWaStatusFromDb = async () => {
+  const profile = await prisma.bengkel_profile.findFirst({
+    select: { 
+      wa_gateway_status: true, 
+      updated_at: true,
+      wa_bot_name: true,
+      wa_bot_number: true,
+      wa_bot_avatar: true
+    }
+  });
+  
+  return {
+    status: (profile?.wa_gateway_status as ClientStatus) || "disconnected",
+    updated_at: profile?.updated_at,
+    bot: {
+      name: profile?.wa_bot_name,
+      number: profile?.wa_bot_number,
+      avatar: profile?.wa_bot_avatar
+    }
+  };
+};
+
+export const getWaQrFromDb = async () => {
+  const profile = await prisma.bengkel_profile.findFirst({
+    select: { wa_gateway_qr: true, wa_gateway_status: true }
+  });
+  
+  if (profile?.wa_gateway_status !== "qr_ready") return null;
+  return profile?.wa_gateway_qr;
+};
+
 export const getWaQr = (): string | null => {
   if (clientStatus === "ready" || clientStatus === "authenticated") return null;
   if (!lastQrBase64) return null;
@@ -127,9 +176,6 @@ export const getWaQr = (): string | null => {
 
 /**
  * Kirim pesan WhatsApp ke nomor tujuan.
- * Format nomor: dimulai dengan kode negara tanpa '+' (misal: 628123456789)
- *
- * @returns { success: boolean, error?: string }
  */
 export const sendWaMessage = async (
   phone: string,
@@ -142,23 +188,32 @@ export const sendWaMessage = async (
     };
   }
 
+  if (!phone || phone.trim() === "") {
+    return { success: false, error: "Nomor tujuan kosong." };
+  }
+
   try {
-    // Format nomor ke format WA: [phone]@c.us
-    const normalizedPhone = phone.replace(/\D/g, "");
+    let normalizedPhone = phone.replace(/\D/g, "");
+    if (normalizedPhone.startsWith("0")) {
+      normalizedPhone = "62" + normalizedPhone.slice(1);
+    }
+
     const chatId = `${normalizedPhone}@c.us`;
+    console.log(`[WA] Attempting to send message to: ${chatId}`);
 
     await waClient.sendMessage(chatId, message);
     return { success: true };
   } catch (err: any) {
-    console.error("[WA] Send message error:", err);
-    return { success: false, error: err.message || "Gagal mengirim pesan" };
+    const errorMsg = err.message || JSON.stringify(err);
+    console.error("[WA] Send message error details:", errorMsg);
+    
+    return { 
+      success: false, 
+      error: errorMsg === "t" ? "Format nomor tidak valid atau nomor tidak terdaftar di WhatsApp." : errorMsg 
+    };
   }
 };
 
-/**
- * Kirim notifikasi stok menipis ke nomor owner/admin (dari settings).
- * Menyimpan log ke tabel wa_notifications.
- */
 export const triggerWaNotificationIfNeeded = async (
   sparePartId: number,
   currentStock: number,
@@ -172,12 +227,17 @@ export const triggerWaNotificationIfNeeded = async (
     if (!part || currentStock > part.minimum_stock) return;
 
     const settings = await prisma.bengkel_profile.findFirst({
-      select: { wa_target_number: true },
+      select: {
+        id: true,
+        wa_target_number: true,
+        wa_bot_enabled: true,
+        wa_template_stok: true,
+      },
     });
 
-    if (!settings?.wa_target_number) return;
+    if (!settings?.wa_target_number || settings.wa_bot_enabled === false) return;
 
-    const message =
+    const defaultMessage =
       `⚠️ *Stok Menipis!*\n\n` +
       `Item: *${part.name}*\n` +
       `SKU: ${part.sku}\n` +
@@ -185,8 +245,18 @@ export const triggerWaNotificationIfNeeded = async (
       `Minimum Stok: ${part.minimum_stock} ${part.unit ?? "pcs"}\n\n` +
       `Segera lakukan restock!`;
 
+    let message = defaultMessage;
+
+    if (settings.wa_template_stok) {
+      message = settings.wa_template_stok
+        .replace(/{{item}}/g, part.name)
+        .replace(/{{sku}}/g, part.sku)
+        .replace(/{{stock}}/g, `${currentStock} ${part.unit ?? "pcs"}`)
+        .replace(/{{min}}/g, `${part.minimum_stock} ${part.unit ?? "pcs"}`);
+    }
+
     // Simpan log notifikasi (default pending)
-    const notif = await prisma.wa_notifications.create({
+    await prisma.wa_notifications.create({
       data: {
         spare_part_id: sparePartId,
         wa_number: settings.wa_target_number,
@@ -194,23 +264,6 @@ export const triggerWaNotificationIfNeeded = async (
         status: "pending",
       },
     });
-
-    // Coba kirim
-    const result = await sendWaMessage(settings.wa_target_number, message);
-
-    await prisma.wa_notifications.update({
-      where: { id: notif.id },
-      data: {
-        status: result.success ? "sent" : "failed",
-        sent_at: result.success ? new Date() : null,
-      },
-    });
-
-    if (!result.success) {
-      console.warn(
-        `[WA] Gagal kirim notif stok untuk ${part.name}: ${result.error}`,
-      );
-    }
   } catch (err) {
     console.error("[WA] triggerWaNotificationIfNeeded error:", err);
   }
@@ -218,7 +271,6 @@ export const triggerWaNotificationIfNeeded = async (
 
 /**
  * Kirim notifikasi progress servis ke nomor WA pelanggan.
- * Digunakan saat status Work Order berubah ke "dikerjakan" atau "selesai".
  */
 export const sendServiceProgressNotification = async (
   customerPhone: string,
@@ -226,25 +278,48 @@ export const sendServiceProgressNotification = async (
   newStatus: string,
   workOrderId: number,
 ): Promise<void> => {
-  const statusMessages: Record<string, string> = {
-    dikerjakan:
-      `🔧 *Update Kendaraan Anda*\n\n` +
-      `Kendaraan dengan nomor polisi *${vehiclePlate}* sedang dalam pengerjaan.\n` +
-      `Tim mekanik kami sedang menangani kendaraan Anda.\n\n` +
-      `Terima kasih telah mempercayakan kendaraan Anda kepada kami! 🙏`,
-    selesai:
-      `✅ *Kendaraan Siap Diambil!*\n\n` +
-      `Kendaraan dengan nomor polisi *${vehiclePlate}* telah selesai dikerjakan dan siap untuk diambil.\n\n` +
-      `Silakan datang ke bengkel untuk mengambil kendaraan Anda.\n` +
-      `Terima kasih! 🚗`,
-  };
-
-  const message = statusMessages[newStatus];
-  if (!message) return; // Hanya kirim untuk status relevan
-
   try {
-    // Simpan log notifikasi
-    const notif = await prisma.wa_notifications.create({
+    const settings = await prisma.bengkel_profile.findFirst({
+      select: {
+        id: true,
+        wa_bot_enabled: true,
+        wa_template_dikerjakan: true,
+        wa_template_selesai: true,
+      },
+    });
+
+    if (settings?.wa_bot_enabled === false) return;
+
+    const defaultMessages: Record<string, string> = {
+      dikerjakan:
+        `🔧 *Update Kendaraan Anda*\n\n` +
+        `Kendaraan dengan nomor polisi *${vehiclePlate}* sedang dalam pengerjaan.\n` +
+        `Tim mekanik kami sedang menangani kendaraan Anda.\n\n` +
+        `Terima kasih telah mempercayakan kendaraan Anda kepada kami! 🙏`,
+      selesai:
+        `✅ *Kendaraan Siap Diambil!*\n\n` +
+        `Kendaraan dengan nomor polisi *${vehiclePlate}* telah selesai dikerjakan dan siap untuk diambil.\n\n` +
+        `Silakan datang ke bengkel untuk mengambil kendaraan Anda.\n` +
+        `Terima kasih! 🚗`,
+    };
+
+    let message = defaultMessages[newStatus];
+    if (newStatus === "dikerjakan" && settings?.wa_template_dikerjakan) {
+      message = settings.wa_template_dikerjakan.replace(
+        /{{plate}}|{{no_polisi}}/g,
+        vehiclePlate,
+      );
+    } else if (newStatus === "selesai" && settings?.wa_template_selesai) {
+      message = settings.wa_template_selesai.replace(
+        /{{plate}}|{{no_polisi}}/g,
+        vehiclePlate,
+      );
+    }
+
+    if (!message) return;
+
+    // Simpan log notifikasi (pending) agar diproses worker
+    await prisma.wa_notifications.create({
       data: {
         spare_part_id: null,
         wa_number: customerPhone,
@@ -252,22 +327,6 @@ export const sendServiceProgressNotification = async (
         status: "pending",
       },
     });
-
-    const result = await sendWaMessage(customerPhone, message);
-
-    await prisma.wa_notifications.update({
-      where: { id: notif.id },
-      data: {
-        status: result.success ? "sent" : "failed",
-        sent_at: result.success ? new Date() : null,
-      },
-    });
-
-    if (!result.success) {
-      console.warn(
-        `[WA] Gagal kirim notif progress servis WO#${workOrderId}: ${result.error}`,
-      );
-    }
   } catch (err) {
     console.error("[WA] sendServiceProgressNotification error:", err);
   }

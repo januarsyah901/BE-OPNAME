@@ -21,8 +21,21 @@ export const getSettings = async (req: Request, res: Response) => {
 
 // PUT /settings
 export const updateSettings = async (req: Request, res: Response) => {
-  const { name, address, phone, logo_url, wa_gateway_token, wa_target_number } =
-    req.body;
+  const {
+    name,
+    address,
+    phone,
+    logo_url,
+    wa_gateway_token,
+    wa_target_number,
+    wa_bot_enabled,
+    wa_template_stok,
+    wa_template_dikerjakan,
+    wa_template_selesai,
+    open_time,
+    close_time,
+    operational_days,
+  } = req.body;
 
   try {
     const data = await prisma.bengkel_profile.upsert({
@@ -34,6 +47,13 @@ export const updateSettings = async (req: Request, res: Response) => {
         logo_url,
         wa_gateway_token,
         wa_target_number,
+        wa_bot_enabled: wa_bot_enabled !== undefined ? Boolean(wa_bot_enabled) : undefined,
+        wa_template_stok,
+        wa_template_dikerjakan,
+        wa_template_selesai,
+        open_time,
+        close_time,
+        operational_days,
       },
       create: {
         id: 1,
@@ -43,6 +63,13 @@ export const updateSettings = async (req: Request, res: Response) => {
         logo_url,
         wa_gateway_token,
         wa_target_number,
+        wa_bot_enabled: wa_bot_enabled !== undefined ? Boolean(wa_bot_enabled) : true,
+        wa_template_stok,
+        wa_template_dikerjakan,
+        wa_template_selesai,
+        open_time,
+        close_time,
+        operational_days,
       },
     });
     return successResponse(res, data, "Settings berhasil diupdate");

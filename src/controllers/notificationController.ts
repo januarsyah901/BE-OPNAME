@@ -5,6 +5,8 @@ import { getPagination } from '../utils/helpers';
 import {
     getWaStatus,
     getWaQr,
+    getWaStatusFromDb,
+    getWaQrFromDb,
     restartWaClient,
     sendWaMessage
 } from '../services/waClientService';
@@ -54,7 +56,7 @@ export const listNotifications = async (req: Request, res: Response) => {
  * Status koneksi WA Web.js client saat ini
  */
 export const getWaClientStatus = async (req: Request, res: Response) => {
-    const data = getWaStatus();
+    const data = await getWaStatusFromDb();
     return successResponse(res, {
         ...data,
         note: data.status === 'disconnected'
@@ -68,12 +70,13 @@ export const getWaClientStatus = async (req: Request, res: Response) => {
  * Ambil QR code (base64 data URL) untuk di-scan via WhatsApp
  */
 export const getWaQrCode = async (req: Request, res: Response) => {
-    const { status } = getWaStatus();
+    const { status } = await getWaStatusFromDb();
 
     if (status === 'ready' || status === 'authenticated') {
         return successResponse(res, { status, qr: null }, 'WA sudah terkoneksi, tidak perlu scan QR.');
     }
 
+    /* Kita hapus cek disconnected di sini agar user tetap bisa dapet QR kalau worker nyala belakangan
     if (status === 'disconnected') {
         return errorResponse(
             res,
@@ -82,8 +85,9 @@ export const getWaQrCode = async (req: Request, res: Response) => {
             503
         );
     }
+    */
 
-    const qr = getWaQr();
+    const qr = await getWaQrFromDb();
     if (!qr) {
         return errorResponse(
             res,
@@ -115,12 +119,12 @@ export const restartWa = async (req: Request, res: Response) => {
  */
 export const sendTestNotification = async (req: Request, res: Response) => {
     try {
-        const { status } = getWaStatus();
+        const { status } = await getWaStatusFromDb();
         if (status !== 'ready') {
             return errorResponse(
                 res,
                 'WA_NOT_READY',
-                `WA client belum siap (status: ${status}). Scan QR terlebih dahulu via GET /notifications/wa/qr`,
+                `WA client belum siap (status: ${status}). Scan QR terlebih dahulu via Dashboard.`,
                 422
             );
         }
@@ -140,6 +144,8 @@ export const sendTestNotification = async (req: Request, res: Response) => {
             `Ini adalah pesan test dari sistem inventori bengkel.\n` +
             `Jika Anda menerima pesan ini, WhatsApp Gateway sudah terkonfigurasi dengan benar.`;
 
+        // Masukkan ke antrian (pending)
+        // Biarkan WA Worker yang memproses pengirimannya secara asinkron
         const notif = await prisma.wa_notifications.create({
             data: {
                 spare_part_id: null,
@@ -149,26 +155,11 @@ export const sendTestNotification = async (req: Request, res: Response) => {
             }
         });
 
-        const result = await sendWaMessage(settings.wa_target_number, message);
-
-        await prisma.wa_notifications.update({
-            where: { id: notif.id },
-            data: {
-                status: result.success ? 'sent' : 'failed',
-                sent_at: result.success ? new Date() : null
-            }
-        });
-
-        if (!result.success) {
-            return errorResponse(res, 'WA_SEND_FAILED', result.error || 'Gagal mengirim pesan', 500);
-        }
-
         return successResponse(res, {
             notification_id: notif.id,
             to: settings.wa_target_number,
-            message,
-            status: 'sent'
-        }, 'Test notifikasi berhasil dikirim via WhatsApp Web');
+            status: 'pending'
+        }, 'Pesan test telah ditambahkan ke antrian pengiriman (Worker). Cek log dalam beberapa detik.');
     } catch (e: any) {
         return errorResponse(res, 'SERVER_ERROR', e.message, 500);
     }
@@ -194,7 +185,7 @@ export const retryNotification = async (req: Request, res: Response) => {
             return errorResponse(res, 'VALIDATION_ERROR', 'Notifikasi ini sudah berhasil dikirim sebelumnya', 422);
         }
 
-        const { status } = getWaStatus();
+        const { status } = await getWaStatusFromDb();
         if (status !== 'ready') {
             return errorResponse(
                 res,
@@ -204,27 +195,28 @@ export const retryNotification = async (req: Request, res: Response) => {
             );
         }
 
-        // Update ke pending dulu
-        await prisma.wa_notifications.update({
-            where: { id: Number(id) },
-            data: { status: 'pending' }
-        });
-
-        const result = await sendWaMessage(notif.wa_number, notif.message_body);
-
+        // Cukup update ke pending. Worker akan otomatis pick up di siklus polling berikutnya.
         const updated = await prisma.wa_notifications.update({
             where: { id: Number(id) },
-            data: {
-                status: result.success ? 'sent' : 'failed',
-                sent_at: result.success ? new Date() : null
+            data: { 
+                status: 'pending',
+                sent_at: null // Reset jika sbelumnya ada
             }
         });
 
-        if (!result.success) {
-            return errorResponse(res, 'WA_SEND_FAILED', result.error || 'Gagal mengirim ulang pesan', 500);
-        }
-
-        return successResponse(res, updated, 'Notifikasi berhasil dikirim ulang');
+        return successResponse(res, updated, 'Notifikasi telah dimasukkan kembali ke antrian (Worker).');
+    } catch (e: any) {
+        return errorResponse(res, 'SERVER_ERROR', e.message, 500);
+    }
+};
+/**
+ * DELETE /notifications/wa
+ * Hapus semua log notifikasi
+ */
+export const clearNotifications = async (req: Request, res: Response) => {
+    try {
+        await prisma.wa_notifications.deleteMany();
+        return successResponse(res, null, 'Semua log notifikasi berhasil dihapus');
     } catch (e: any) {
         return errorResponse(res, 'SERVER_ERROR', e.message, 500);
     }
