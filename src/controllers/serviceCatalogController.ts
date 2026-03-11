@@ -37,3 +37,38 @@ export const createServiceCatalog = async (req: Request, res: Response) => {
     return errorResponse(res, "SERVER_ERROR", error.message, 500);
   }
 };
+
+export const updateServiceCatalog = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description, kategori, standard_price, berlaku_untuk, is_active } = req.body;
+
+    const data = await prisma.service_catalog.update({
+      where: { id: Number(id) },
+      data: {
+        name,
+        description,
+        kategori,
+        standard_price: standard_price !== undefined ? standard_price : undefined,
+        berlaku_untuk,
+        is_active,
+      },
+    });
+
+    return successResponse(res, data, "Layanan berhasil diperbarui");
+  } catch (error: any) {
+    return errorResponse(res, "SERVER_ERROR", error.message, 500);
+  }
+};
+
+export const deleteServiceCatalog = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.service_catalog.delete({
+      where: { id: Number(id) },
+    });
+    return successResponse(res, null, "Layanan berhasil dihapus dari katalog");
+  } catch (error: any) {
+    return errorResponse(res, "SERVER_ERROR", error.message, 500);
+  }
+};

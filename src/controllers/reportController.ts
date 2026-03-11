@@ -70,18 +70,47 @@ export const topProductsReport = async (req: Request, res: Response) => {
     try {
         const data = await prisma.transaction_items.findMany({
             where: { item_type: 'spare_part' },
-            select: { item_name: true, spare_part_id: true, quantity: true }
+            select: { item_name: true, spare_part_id: true, quantity: true, unit_price: true }
         });
 
-        const aggregated: Record<string, { name: string; total_qty: number }> = {};
+        const aggregated: Record<string, { name: string; total_qty: number; revenue: number }> = {};
         data.forEach((item) => {
             const key = String(item.spare_part_id ?? item.item_name);
-            if (!aggregated[key]) aggregated[key] = { name: item.item_name, total_qty: 0 };
+            if (!aggregated[key]) aggregated[key] = { name: item.item_name, total_qty: 0, revenue: 0 };
             aggregated[key].total_qty += item.quantity;
+            aggregated[key].revenue += (item.quantity * Number(item.unit_price));
         });
 
         const result = Object.values(aggregated)
             .sort((a, b) => b.total_qty - a.total_qty)
+            .slice(0, limit);
+
+        return successResponse(res, result);
+    } catch (e: any) {
+        return errorResponse(res, 'SERVER_ERROR', e.message, 500);
+    }
+};
+
+// GET /reports/top-services
+export const topServicesReport = async (req: Request, res: Response) => {
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    try {
+        const data = await prisma.transaction_items.findMany({
+            where: { item_type: 'jasa' },
+            select: { item_name: true, spare_part_id: true, quantity: true, unit_price: true }
+        });
+
+        const aggregated: Record<string, { name: string; count: number; revenue: number }> = {};
+        data.forEach((item) => {
+            const key = String(item.spare_part_id ?? item.item_name);
+            if (!aggregated[key]) aggregated[key] = { name: item.item_name, count: 0, revenue: 0 };
+            aggregated[key].count += item.quantity;
+            aggregated[key].revenue += (item.quantity * Number(item.unit_price));
+        });
+
+        const result = Object.values(aggregated)
+            .sort((a, b) => b.count - a.count)
             .slice(0, limit);
 
         return successResponse(res, result);
@@ -126,6 +155,87 @@ export const opnameReport = async (req: Request, res: Response) => {
         };
 
         return successResponse(res, { ...data, summary });
+    } catch (e: any) {
+        return errorResponse(res, 'SERVER_ERROR', e.message, 500);
+    }
+};
+
+// GET /reports/reminders
+export const remindersReport = async (req: Request, res: Response) => {
+    try {
+        // Logic: Find the latest transaction for each vehicle
+        // If the latest transaction was more than 3 months ago, suggest a "Service Rutin" or "Ganti Oli"
+        const latestTransactions = await prisma.transactions.findMany({
+            where: { payment_status: 'lunas' },
+            include: {
+                customers: { select: { name: true, phone: true } },
+                vehicles: { select: { plate_number: true, brand: true, model: true, type: true } },
+                transaction_items: true
+            },
+            orderBy: { transaction_date: 'desc' },
+        });
+
+        // Filter unique by vehicle_id
+        const uniqueVehicles = new Map();
+        latestTransactions.forEach(t => {
+            if (t.vehicle_id && !uniqueVehicles.has(t.vehicle_id)) {
+                uniqueVehicles.set(t.vehicle_id, t);
+            }
+        });
+
+        const reminders = Array.from(uniqueVehicles.values()).map(t => {
+            const lastDate = new Date(t.transaction_date);
+            const today = new Date();
+            const diffMonths = (today.getFullYear() - lastDate.getFullYear()) * 12 + (today.getMonth() - lastDate.getMonth());
+            
+            // Mocking logic for the sake of completeness if no real "due" logic exists
+            // In real app, we might check odometer or specific service intervals
+            let status = 'Aktif';
+            if (diffMonths > 6) status = 'Lewat Jatuh Tempo';
+            else if (diffMonths > 4) status = 'Terkirim';
+
+            const nextServiceDate = new Date(lastDate);
+            nextServiceDate.setMonth(nextServiceDate.getMonth() + 6);
+
+            return {
+                id: `REM-${t.id}`,
+                pelanggan: t.customers?.name || 'Umum',
+                noPolisi: t.vehicles?.plate_number || '-',
+                kendaraan: `${t.vehicles?.brand || ''} ${t.vehicles?.model || ''}`.trim() || 'Kendaraan',
+                phone: t.customers?.phone || '-',
+                jenisReminder: diffMonths > 6 ? 'Service Rutin' : 'Ganti Oli',
+                jadwalTanggal: nextServiceDate.toISOString().split('T')[0],
+                odometerSaat: 0, // In real app, get from last transaction note or metadata
+                odometerTarget: 0,
+                status: status,
+                catatan: `Servis terakhir pada ${lastDate.toLocaleDateString('id-ID')}`
+            };
+        });
+
+        return successResponse(res, reminders);
+    } catch (e: any) {
+        return errorResponse(res, 'SERVER_ERROR', e.message, 500);
+    }
+};
+
+export const vehicleRatioReport = async (req: Request, res: Response) => {
+    try {
+        const vehicles = await prisma.vehicles.groupBy({
+            by: ['type'],
+            _count: {
+                id: true
+            }
+        });
+
+        const total = vehicles.reduce((sum, v) => sum + v._count.id, 0);
+
+        const data = vehicles.map(v => ({
+            label: v.type,
+            value: v._count.id,
+            percentage: total === 0 ? 0 : Math.round((v._count.id / total) * 100)
+        }));
+
+        return successResponse(res, data);
     } catch (e: any) {
         return errorResponse(res, 'SERVER_ERROR', e.message, 500);
     }

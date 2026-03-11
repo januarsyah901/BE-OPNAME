@@ -25,7 +25,6 @@ export const updateSettings = async (req: Request, res: Response) => {
     req.body;
 
   try {
-    // Always update row id=1 (singleton pattern)
     const data = await prisma.bengkel_profile.upsert({
       where: { id: 1 },
       update: {

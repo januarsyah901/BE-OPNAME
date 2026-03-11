@@ -7,19 +7,25 @@ import { generateInvoiceNumber, getPagination } from '../utils/helpers';
 export const listTransactions = async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const { from, perPage } = getPagination(page);
-    const { date, status } = req.query;
+    const { date, status, plate_number } = req.query;
 
     try {
         const where: any = {};
         if (date) where.transaction_date = new Date(date as string);
         if (status) where.payment_status = String(status);
+        if (plate_number) {
+            where.vehicles = {
+                plate_number: String(plate_number)
+            };
+        }
 
         const [data, total] = await Promise.all([
             prisma.transactions.findMany({
                 where,
                 include: {
                     customers: { select: { name: true } },
-                    vehicles: { select: { plate_number: true } }
+                    vehicles: { select: { plate_number: true } },
+                    transaction_items: true
                 },
                 orderBy: { transaction_date: 'desc' },
                 skip: from,
