@@ -240,3 +240,134 @@ export const vehicleRatioReport = async (req: Request, res: Response) => {
         return errorResponse(res, 'SERVER_ERROR', e.message, 500);
     }
 };
+
+export const dashboardStatsReport = async (req: Request, res: Response) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const [
+            activeQueue,
+            completedToday,
+            dailyRevenue,
+            lowStockCount
+        ] = await Promise.all([
+            // 1. Antrean Aktif (menunggu + proses)
+            prisma.work_orders.count({
+                where: {
+                    status: { in: ['menunggu', 'proses', 'dikerjakan'] },
+                    deleted_at: null
+                }
+            }),
+            // 2. Kendaraan Selesai (all completed for now since no updated_at)
+            prisma.work_orders.count({
+                where: {
+                    status: 'selesai',
+                    deleted_at: null
+                }
+            }),
+            // 3. Pendapatan Hari Ini
+            prisma.transactions.aggregate({
+                where: {
+                    transaction_date: { gte: today, lt: tomorrow },
+                    payment_status: 'lunas'
+                },
+                _sum: {
+                    total_amount: true
+                }
+            }),
+            // 4. Menunggu Sparepart (stok menipis)
+            prisma.spare_parts.count({
+                where: {
+                    current_stock: { lt: prisma.spare_parts.fields.minimum_stock },
+                    deleted_at: null
+                }
+            })
+        ]);
+
+        // Calculate growth (mocked for now as we'd need yesterday's data too)
+        return successResponse(res, {
+            activeQueue: { value: activeQueue, growth: 10, isUp: true },
+            completedTasks: { value: completedToday, growth: 5, isUp: true },
+            dailyRevenue: { 
+                value: `Rp ${new Intl.NumberFormat('id-ID').format(Number(dailyRevenue._sum.total_amount || 0))}`, 
+                growth: 12, 
+                isUp: true 
+            },
+            pendingSpareparts: { value: lowStockCount, growth: 2, isUp: false }
+        });
+    } catch (e: any) {
+        return errorResponse(res, 'SERVER_ERROR', e.message, 500);
+    }
+};
+
+export const recentActivitiesReport = async (req: Request, res: Response) => {
+    try {
+        const [transactions, workOrders, lowStock] = await Promise.all([
+            prisma.transactions.findMany({
+                take: 5,
+                orderBy: { created_at: 'desc' },
+                include: { vehicles: { select: { plate_number: true } } }
+            }),
+            prisma.work_orders.findMany({
+                take: 5,
+                orderBy: { created_at: 'desc' },
+                include: { vehicles: { select: { plate_number: true } } }
+            }),
+            prisma.spare_parts.findMany({
+                where: { current_stock: { lt: prisma.spare_parts.fields.minimum_stock } },
+                take: 3,
+                orderBy: { updated_at: 'desc' }
+            })
+        ]);
+
+        const activities: any[] = [];
+
+        transactions.forEach(t => {
+            activities.push({
+                id: `trans-${t.id}`,
+                type: 'payment',
+                title: 'Pembayaran Diterima',
+                description: `Invoice #${t.invoice_number} telah ${t.payment_status.replace('_', ' ')} sebesar Rp ${new Intl.NumberFormat('id-ID').format(Number(t.total_amount))}`,
+                time: t.created_at,
+                icon: 'Cash',
+                color: 'bg-secondary/10 text-secondary'
+            });
+        });
+
+        workOrders.forEach(w => {
+            activities.push({
+                id: `wo-${w.id}`,
+                type: 'service',
+                title: w.status === 'selesai' ? 'Servis Selesai' : 'Update Antrean',
+                description: `${w.layanan} untuk ${w.vehicles?.plate_number || 'Kendaraan'} status: ${w.status}`,
+                time: w.created_at,
+                icon: w.status === 'selesai' ? 'Success' : 'Antrean',
+                color: w.status === 'selesai' ? 'bg-green/10 text-green' : 'bg-blue/10 text-blue'
+            });
+        });
+
+        lowStock.forEach(s => {
+            activities.push({
+                id: `stock-${s.id}`,
+                type: 'inventory',
+                title: 'Stok Menipis',
+                description: `Stok ${s.name} tersisa ${s.current_stock} ${s.unit}. Segera restock!`,
+                time: s.updated_at,
+                icon: 'Warning',
+                color: 'bg-red/10 text-red'
+            });
+        });
+
+        const sortedActivities = activities
+            .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+            .slice(0, 10);
+
+        return successResponse(res, sortedActivities);
+    } catch (e: any) {
+        return errorResponse(res, 'SERVER_ERROR', e.message, 500);
+    }
+};
