@@ -1,0 +1,2318 @@
+{
+    "info": {
+        "_postman_id": "autoservice-inventory-api-v1",
+        "name": "AutoService Inventory API",
+        "description": "Koleksi lengkap endpoint API AutoService Inventory Web Panel.\n\n**Cara Pakai:**\n1. Import file ini ke Postman\n2. Import file `AutoService_ENV.postman_environment.json`\n3. Pilih environment yang sesuai (Local / Production)\n4. Jalankan request **Auth → Login** terlebih dahulu → token otomatis tersimpan\n5. Semua request lain sudah otomatis pakai token dari environment\n\n**Seed Credentials:**\n- Owner: `owner` / `owner123`\n- Admin: `admin` / `admin123`  \n- Kasir: `kasir1` / `kasir123`",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [],
+    "item": [
+        {
+            "name": "Auth",
+            "description": "Autentikasi & manajemen sesi pengguna",
+            "item": [
+                {
+                    "name": "Login (Admin)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.success && res.data?.token) {",
+                                    "    pm.environment.set('token', res.data.token);",
+                                    "    pm.environment.set('current_user_id', res.data.user.id);",
+                                    "    pm.environment.set('current_role', res.data.user.role);",
+                                    "    console.log('✅ Token saved. Role:', res.data.user.role);",
+                                    "}",
+                                    "pm.test('Login berhasil', () => pm.response.to.have.status(200));",
+                                    "pm.test('Token ada', () => pm.expect(res.data?.token).to.be.a('string'));"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Login (Owner)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.success && res.data?.token) {",
+                                    "    pm.environment.set('token', res.data.token);",
+                                    "    pm.environment.set('current_user_id', res.data.user.id);",
+                                    "    pm.environment.set('current_role', res.data.user.role);",
+                                    "    console.log('✅ Token saved. Role:', res.data.user.role);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"username\": \"owner\",\n  \"password\": \"owner123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Login (Kasir)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.success && res.data?.token) {",
+                                    "    pm.environment.set('token', res.data.token);",
+                                    "    console.log('✅ Token saved. Role:', res.data.user.role);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"username\": \"kasir1\",\n  \"password\": \"kasir123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Me (Profile Saya)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Data user ada', () => pm.expect(pm.response.json().data).to.have.property('user'));"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/auth/me",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "me"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "url": {
+                            "raw": "{{base_url}}/auth/logout",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "logout"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Users",
+            "description": "Manajemen pengguna (Owner & Admin only)",
+            "item": [
+                {
+                    "name": "List Users",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.length > 0) {",
+                                    "    pm.environment.set('user_id', res.data[1]?.id || res.data[0].id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/users",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "users"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create User",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.id) pm.environment.set('user_id', res.data.id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Kasir Baru\",\n  \"username\": \"kasir_baru\",\n  \"password\": \"password123\",\n  \"role\": \"kasir\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/users",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "users"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get User by ID",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/users/{{user_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "users",
+                                "{{user_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update User",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Kasir Updated\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/users/{{user_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "users",
+                                "{{user_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete User",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{base_url}}/users/{{user_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "users",
+                                "{{user_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Customers",
+            "description": "Manajemen data pelanggan",
+            "item": [
+                {
+                    "name": "List Customers",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.length > 0) pm.environment.set('customer_id', res.data[0].id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/customers?page=1&search=",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "customers"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Cari nama/phone customer"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Customer",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.id) pm.environment.set('customer_id', res.data.id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Andi Susanto\",\n  \"phone\": \"081234567890\",\n  \"email\": \"andi@email.com\",\n  \"address\": \"Jl. Merdeka No. 10, Bandung\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/customers",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "customers"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Customer by ID",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/customers/{{customer_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "customers",
+                                "{{customer_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Customer",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Andi Susanto Updated\",\n  \"phone\": \"081234567890\",\n  \"address\": \"Jl. Mawar No. 5, Bandung\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/customers/{{customer_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "customers",
+                                "{{customer_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Customer (Soft)",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{base_url}}/customers/{{customer_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "customers",
+                                "{{customer_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Customer History",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/customers/{{customer_id}}/history",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "customers",
+                                "{{customer_id}}",
+                                "history"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Vehicles",
+            "description": "Kendaraan milik customer",
+            "item": [
+                {
+                    "name": "List Vehicles by Customer",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.length > 0) pm.environment.set('vehicle_id', res.data[0].id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/customers/{{customer_id}}/vehicles",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "customers",
+                                "{{customer_id}}",
+                                "vehicles"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Vehicle",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.id) pm.environment.set('vehicle_id', res.data.id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"plate_number\": \"D 1234 {{$randomInt}}\",\n  \"type\": \"mobil\",\n  \"brand\": \"Toyota\",\n  \"model\": \"Avanza\",\n  \"year\": 2020\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/customers/{{customer_id}}/vehicles",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "customers",
+                                "{{customer_id}}",
+                                "vehicles"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Vehicle",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"brand\": \"Toyota\",\n  \"model\": \"Avanza Updated\",\n  \"year\": 2021\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/vehicles/{{vehicle_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "vehicles",
+                                "{{vehicle_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Categories",
+            "description": "Kategori spare part",
+            "item": [
+                {
+                    "name": "List Categories",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.length > 0) pm.environment.set('category_id', res.data[0].id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/categories",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "categories"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Category",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.id) pm.environment.set('category_id', res.data.id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Kategori Baru\",\n  \"description\": \"Deskripsi kategori baru\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/categories",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "categories"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Category",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Kategori Updated\",\n  \"description\": \"Deskripsi diupdate\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/categories/{{category_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "categories",
+                                "{{category_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Category",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{base_url}}/categories/{{category_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "categories",
+                                "{{category_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Spare Parts",
+            "description": "Inventori spare part - CRUD + barcode",
+            "item": [
+                {
+                    "name": "List Spare Parts",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.length > 0) pm.environment.set('spare_part_id', res.data[0].id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/spare-parts?page=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "spare-parts"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "category_id",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "low_stock",
+                                    "value": "true",
+                                    "disabled": true,
+                                    "description": "Filter barang hampir habis"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List Spare Parts (Low Stock)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/spare-parts?low_stock=true",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "spare-parts"
+                            ],
+                            "query": [
+                                {
+                                    "key": "low_stock",
+                                    "value": "true"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Spare Part",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.id) pm.environment.set('spare_part_id', res.data.id);",
+                                    "pm.test('SKU ter-generate', () => pm.expect(res.data?.sku).to.match(/^AS-/));"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"category_id\": {{category_id}},\n  \"name\": \"Oli Mesin Test 1L\",\n  \"cost_price\": 45000,\n  \"sell_price\": 65000,\n  \"current_stock\": 20,\n  \"minimum_stock\": 5,\n  \"unit\": \"liter\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/spare-parts",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "spare-parts"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Spare Part by ID",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/spare-parts/{{spare_part_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "spare-parts",
+                                "{{spare_part_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Spare Part",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"sell_price\": 70000,\n  \"minimum_stock\": 8\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/spare-parts/{{spare_part_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "spare-parts",
+                                "{{spare_part_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Spare Part (Soft)",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{base_url}}/spare-parts/{{spare_part_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "spare-parts",
+                                "{{spare_part_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Barcode Image",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/spare-parts/{{spare_part_id}}/barcode",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "spare-parts",
+                                "{{spare_part_id}}",
+                                "barcode"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Stock",
+            "description": "Pergerakan stok masuk & keluar",
+            "item": [
+                {
+                    "name": "List Stock Movements",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/stock-movements?page=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "stock-movements"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "spare_part_id",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "type",
+                                    "value": "masuk",
+                                    "disabled": true,
+                                    "description": "masuk | keluar | opname_adjustment"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Stock In (Restock)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('current_stock bertambah', () => {",
+                                    "  const res = pm.response.json();",
+                                    "  pm.expect(res.data?.spare_part?.current_stock).to.be.a('number');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"spare_part_id\": {{spare_part_id}},\n  \"quantity\": 10,\n  \"note\": \"Restock dari Supplier ABC\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/stock/in",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "stock",
+                                "in"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Stock Out (Manual)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Stok berkurang', () => {",
+                                    "  const res = pm.response.json();",
+                                    "  pm.expect(res.data?.spare_part?.current_stock).to.be.a('number');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"spare_part_id\": {{spare_part_id}},\n  \"quantity\": 2,\n  \"note\": \"Dipakai untuk servis manual\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/stock/out",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "stock",
+                                "out"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Stock Out - Insufficient (Expect 422)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 422 jika stok tidak cukup', () => pm.response.to.have.status(422));",
+                                    "pm.test('Error code STOCK_INSUFFICIENT', () => {",
+                                    "  const res = pm.response.json();",
+                                    "  pm.expect(res.error?.code).to.eql('STOCK_INSUFFICIENT');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"spare_part_id\": {{spare_part_id}},\n  \"quantity\": 99999,\n  \"note\": \"Test stok tidak cukup\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/stock/out",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "stock",
+                                "out"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Stock Opname",
+            "description": "Sesi stock opname fisik",
+            "item": [
+                {
+                    "name": "List Opname Sessions",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.length > 0) pm.environment.set('opname_id', res.data[0].id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/opnames",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "opnames"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Opname Session",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.id) pm.environment.set('opname_id', res.data.id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"session_name\": \"Opname Maret 2026\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/opnames",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "opnames"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Opname Detail",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/opnames/{{opname_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "opnames",
+                                "{{opname_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Input Hitungan Fisik",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.id) pm.environment.set('opname_item_id', res.data.id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"spare_part_id\": {{spare_part_id}},\n  \"physical_count\": 18\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/opnames/{{opname_id}}/items",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "opnames",
+                                "{{opname_id}}",
+                                "items"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Hitungan Fisik",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"physical_count\": 20,\n  \"note\": \"Update setelah cek ulang\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/opnames/{{opname_id}}/items/{{opname_item_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "opnames",
+                                "{{opname_id}}",
+                                "items",
+                                "{{opname_item_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Close Opname Session",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Sesi closed', () => {",
+                                    "  const res = pm.response.json();",
+                                    "  pm.expect(res.data?.status).to.eql('closed');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": {
+                            "raw": "{{base_url}}/opnames/{{opname_id}}/close",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "opnames",
+                                "{{opname_id}}",
+                                "close"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Work Orders",
+            "description": "Work Order / antrian servis kendaraan",
+            "item": [
+                {
+                    "name": "List Work Orders",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.length > 0) pm.environment.set('work_order_id', res.data[0].id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/work-orders?page=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "work-orders"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "menunggu",
+                                    "disabled": true,
+                                    "description": "menunggu | dikerjakan | menunggu_sparepart | selesai"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Work Order",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.id) pm.environment.set('work_order_id', res.data.id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"customer_id\": {{customer_id}},\n  \"vehicle_id\": {{vehicle_id}},\n  \"layanan\": \"Service Rutin 10.000 km\",\n  \"keluhan\": \"Rem berdecit saat ngerem mendadak\",\n  \"estimasi_biaya\": 350000,\n  \"estimasi_selesai\": \"2 jam\",\n  \"menginap\": false\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/work-orders",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "work-orders"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Work Order Detail",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/work-orders/{{work_order_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "work-orders",
+                                "{{work_order_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Work Order",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"keluhan\": \"Rem berdecit + AC kurang dingin\",\n  \"estimasi_biaya\": 500000\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/work-orders/{{work_order_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "work-orders",
+                                "{{work_order_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Status → Dikerjakan",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Status WO updated', () => {",
+                                    "  const res = pm.response.json();",
+                                    "  pm.expect(res.data?.status).to.eql('dikerjakan');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"dikerjakan\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/work-orders/{{work_order_id}}/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "work-orders",
+                                "{{work_order_id}}",
+                                "status"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Status → Selesai",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"selesai\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/work-orders/{{work_order_id}}/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "work-orders",
+                                "{{work_order_id}}",
+                                "status"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Assign Mekanik",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"mekanik\": \"Ahmad Fauzi\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/work-orders/{{work_order_id}}/mechanic",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "work-orders",
+                                "{{work_order_id}}",
+                                "mechanic"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Work Order",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{base_url}}/work-orders/{{work_order_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "work-orders",
+                                "{{work_order_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Service Catalog",
+            "description": "Katalog jasa / layanan bengkel",
+            "item": [
+                {
+                    "name": "List Service Catalog",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.length > 0) pm.environment.set('service_catalog_id', res.data[0].id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/service-catalog",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service-catalog"
+                            ],
+                            "query": [
+                                {
+                                    "key": "berlaku_untuk",
+                                    "value": "mobil",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "is_active",
+                                    "value": "true",
+                                    "disabled": true
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Service Catalog",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.id) pm.environment.set('service_catalog_id', res.data.id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Ganti Oli & Filter\",\n  \"description\": \"Penggantian oli mesin dan filter oli\",\n  \"kategori\": \"Mesin\",\n  \"standard_price\": 50000,\n  \"durasi_estimasi\": \"30-45 menit\",\n  \"berlaku_untuk\": \"keduanya\",\n  \"garansi\": \"1 bulan / 1.000 km\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service-catalog",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service-catalog"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Service Catalog",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"standard_price\": 60000,\n  \"durasi_estimasi\": \"30 menit\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/service-catalog/{{service_catalog_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service-catalog",
+                                "{{service_catalog_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Toggle Aktif/Nonaktif",
+                    "request": {
+                        "method": "PATCH",
+                        "url": {
+                            "raw": "{{base_url}}/service-catalog/{{service_catalog_id}}/toggle",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service-catalog",
+                                "{{service_catalog_id}}",
+                                "toggle"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Service Catalog",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{base_url}}/service-catalog/{{service_catalog_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "service-catalog",
+                                "{{service_catalog_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Transactions",
+            "description": "Transaksi / nota servis",
+            "item": [
+                {
+                    "name": "List Transactions",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.length > 0) pm.environment.set('transaction_id', res.data[0].id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/transactions?page=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "transactions"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "payment_status",
+                                    "value": "belum_bayar",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "date",
+                                    "value": "2026-03",
+                                    "disabled": true
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Transaction",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.id) pm.environment.set('transaction_id', res.data.id);",
+                                    "pm.test('Invoice number ada', () => pm.expect(res.data?.invoice_number).to.match(/^INV-/));"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"customer_id\": {{customer_id}},\n  \"vehicle_id\": {{vehicle_id}},\n  \"transaction_date\": \"2026-03-06\",\n  \"payment_method\": \"cash\",\n  \"notes\": \"Ganti oli + tune up\",\n  \"items\": [\n    {\n      \"item_type\": \"spare_part\",\n      \"spare_part_id\": {{spare_part_id}},\n      \"item_name\": \"Oli Mesin 10W-40 1L\",\n      \"quantity\": 2,\n      \"unit_price\": 65000\n    },\n    {\n      \"item_type\": \"jasa\",\n      \"item_name\": \"Jasa Tune Up\",\n      \"quantity\": 1,\n      \"unit_price\": 85000\n    }\n  ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/transactions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "transactions"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Transaction Detail",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/transactions/{{transaction_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "transactions",
+                                "{{transaction_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Payment (Lunas)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Status lunas', () => {",
+                                    "  const res = pm.response.json();",
+                                    "  pm.expect(res.data?.payment_status).to.eql('lunas');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"paid_amount\": 215000,\n  \"payment_status\": \"lunas\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/transactions/{{transaction_id}}/payment",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "transactions",
+                                "{{transaction_id}}",
+                                "payment"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Payment (DP)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"paid_amount\": 100000,\n  \"payment_status\": \"dp\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/transactions/{{transaction_id}}/payment",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "transactions",
+                                "{{transaction_id}}",
+                                "payment"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Generate PDF Nota",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/transactions/{{transaction_id}}/pdf",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "transactions",
+                                "{{transaction_id}}",
+                                "pdf"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Reports",
+            "description": "Laporan omset & stok",
+            "item": [
+                {
+                    "name": "Revenue (Monthly)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Ada total_revenue', () => pm.expect(pm.response.json().data?.total_revenue).to.be.a('number'));"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/reports/revenue?period=monthly&date=2026-03",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "revenue"
+                            ],
+                            "query": [
+                                {
+                                    "key": "period",
+                                    "value": "monthly",
+                                    "description": "daily | monthly"
+                                },
+                                {
+                                    "key": "date",
+                                    "value": "2026-03",
+                                    "description": "Format: YYYY-MM (monthly) atau YYYY-MM-DD (daily)"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Revenue (Daily)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/reports/revenue?period=daily&date=2026-03-06",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "revenue"
+                            ],
+                            "query": [
+                                {
+                                    "key": "period",
+                                    "value": "daily"
+                                },
+                                {
+                                    "key": "date",
+                                    "value": "2026-03-06"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Top Products",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/reports/top-products?limit=10",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "top-products"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Low Stock",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/reports/low-stock",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "low-stock"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Opname Recap",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/reports/opname/{{opname_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "reports",
+                                "opname",
+                                "{{opname_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Notifications (WA Web.js)",
+            "description": "Log notifikasi WA & manajemen koneksi WhatsApp Web.js",
+            "item": [
+                {
+                    "name": "List WA Notifications",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "if (res.data?.length > 0) pm.environment.set('notification_id', res.data[0].id);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/notifications/wa?page=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "wa"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "failed",
+                                    "disabled": true,
+                                    "description": "pending | sent | failed"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "WA Client Status",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Ada field status', () => {",
+                                    "  const res = pm.response.json();",
+                                    "  pm.expect(res.data?.status).to.be.a('string');",
+                                    "  console.log('WA Status:', res.data?.status);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/notifications/wa/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "wa",
+                                "status"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get WA QR Code",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200 atau 404', () => {",
+                                    "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                                    "});",
+                                    "const res = pm.response.json();",
+                                    "if(res.data?.qr) console.log('QR tersedia, silakan scan');"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/notifications/wa/qr",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "wa",
+                                "qr"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Restart WA Client",
+                    "request": {
+                        "method": "POST",
+                        "url": {
+                            "raw": "{{base_url}}/notifications/wa/restart",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "wa",
+                                "restart"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Test Send WA Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"phone\": \"6281234567890\",\n  \"message\": \"Halo! Ini pesan test dari AutoService Inventory.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/notifications/wa/test",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "wa",
+                                "test"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Retry Failed Notification",
+                    "request": {
+                        "method": "POST",
+                        "url": {
+                            "raw": "{{base_url}}/notifications/wa/retry/{{notification_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "notifications",
+                                "wa",
+                                "retry",
+                                "{{notification_id}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Settings",
+            "description": "Pengaturan profil bengkel",
+            "item": [
+                {
+                    "name": "Get Settings",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Ada nama bengkel', () => {",
+                                    "  const res = pm.response.json();",
+                                    "  pm.expect(res.data?.name).to.be.a('string');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/settings",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "settings"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Settings",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Settings updated', () => pm.expect(pm.response.json().success).to.be.true);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Bengkel AutoService Updated\",\n  \"address\": \"Jl. Raya Bandung No. 99, Cimahi\",\n  \"phone\": \"022-6123456\",\n  \"wa_target_number\": \"6281234567890\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/settings",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "settings"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "⚡ Quick Tests",
+            "description": "Kumpulan test cepat untuk verifikasi endpoint kritis",
+            "item": [
+                {
+                    "name": "Health Check (Root Redirect)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Server up (200 atau 302)', () => {",
+                                    "  pm.expect(pm.response.code).to.be.oneOf([200, 302]);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{host}}/",
+                            "host": [
+                                "{{host}}"
+                            ],
+                            "path": [
+                                ""
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Unauthorized (No Token)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401 tanpa token', () => pm.response.to.have.status(401));",
+                                    "pm.test('Error UNAUTHORIZED', () => {",
+                                    "  const res = pm.response.json();",
+                                    "  pm.expect(res.error?.code).to.eql('UNAUTHORIZED');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/users",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "users"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Login Wrong Password (Expect 401)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401 password salah', () => pm.response.to.have.status(401));"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"wrongpassword\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "404 Not Found",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                                    "pm.test('Error NOT_FOUND', () => {",
+                                    "  const res = pm.response.json();",
+                                    "  pm.expect(res.error?.code).to.eql('NOT_FOUND');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{base_url}}/endpoint-tidak-ada",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "endpoint-tidak-ada"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -23,6 +23,25 @@ function generateSKU(categoryName: string, id: number): string {
 // SEEDER FUNCTIONS
 // ─────────────────────────────────────────────
 
+async function cleanDatabase() {
+  console.log("🧹 Membersihkan database...");
+  // Hapus dengan urutan yang benar (child first)
+  await prisma.stock_movements.deleteMany();
+  await prisma.transaction_items.deleteMany();
+  await prisma.transactions.deleteMany();
+  await prisma.wa_notifications.deleteMany();
+  await prisma.stock_opname_items.deleteMany();
+  await prisma.stock_opnames.deleteMany();
+  await prisma.work_orders.deleteMany();
+  await prisma.service_catalog.deleteMany();
+  await prisma.vehicles.deleteMany();
+  await prisma.customers.deleteMany();
+  await prisma.spare_parts.deleteMany();
+  await prisma.categories.deleteMany();
+  // Sisakan users tapi kita akan upsert
+  console.log("✨ Database bersih.");
+}
+
 async function seedUsers() {
   const users = [
     {
@@ -39,12 +58,6 @@ async function seedUsers() {
     },
     {
       name: "Kasir Satu",
-      username: "kasir",
-      password: "kasir123",
-      role: "kasir",
-    },
-    {
-      name: "Kasir Dua",
       username: "kasir1",
       password: "kasir123",
       role: "kasir",
@@ -56,7 +69,11 @@ async function seedUsers() {
       const password_hash = bcrypt.hashSync(u.password, 10);
       await prisma.users.upsert({
         where: { username: u.username },
-        update: {},
+        update: {
+          password_hash,
+          role: u.role,
+          deleted_at: null,
+        },
         create: {
           name: u.name,
           username: u.username,
@@ -749,6 +766,7 @@ async function seedVehicleMasters() {
 async function main() {
   console.log("\n🌱 Memulai proses seeding database AutoService...\n");
 
+  await cleanDatabase();
   await seedUsers();
   await seedBengkelProfile();
   await seedCategories();

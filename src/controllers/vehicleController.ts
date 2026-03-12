@@ -30,6 +30,9 @@ export const createVehicle = async (req: Request, res: Response) => {
         });
         return successResponse(res, data, 'Kendaraan berhasil ditambahkan', 201);
     } catch (e: any) {
+        if (e.code === 'P2002') {
+            return errorResponse(res, 'CONFLICT', 'Nomor plat sudah terdaftar di sistem', 409);
+        }
         return errorResponse(res, 'SERVER_ERROR', e.message, 500);
     }
 };
