@@ -1,4 +1,4 @@
-wimport { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "../config/env";
 import { JwtPayload } from "../types";

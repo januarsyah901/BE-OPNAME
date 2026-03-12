@@ -8,6 +8,7 @@ jest.mock('../src/config/prisma', () => ({
   __esModule: true,
   default: {
     users: {
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
