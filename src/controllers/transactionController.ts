@@ -100,8 +100,8 @@ export const createTransaction = async (req: Request, res: Response) => {
                 }
             },
             include: {
-                customers: { select: { name: true, phone: true } },
-                vehicles: { select: { plate_number: true, type: true, brand: true, model: true } },
+                customers: true,
+                vehicles: true,
                 transaction_items: true
             }
         });
