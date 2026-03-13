@@ -5,7 +5,6 @@ import { successResponse, errorResponse } from "../utils/response";
 export const getServiceCatalog = async (req: Request, res: Response) => {
   try {
     const data = await prisma.service_catalog.findMany({
-      where: { is_active: true },
       orderBy: { name: "asc" },
     });
     return successResponse(res, data, "Katalog layanan berhasil diambil");
@@ -16,7 +15,7 @@ export const getServiceCatalog = async (req: Request, res: Response) => {
 
 export const createServiceCatalog = async (req: Request, res: Response) => {
   try {
-    const { name, description, kategori, standard_price, berlaku_untuk, durasi_estimasi, garansi } = req.body;
+    const { sku, name, description, kategori, standard_price, berlaku_untuk, durasi_estimasi, garansi } = req.body;
     
     if (!name) {
       return errorResponse(res, "VALIDATION_ERROR", "Nama layanan wajib diisi", 400);
@@ -24,6 +23,7 @@ export const createServiceCatalog = async (req: Request, res: Response) => {
 
     const data = await prisma.service_catalog.create({
       data: {
+        sku,
         name,
         description,
         kategori,
@@ -43,11 +43,12 @@ export const createServiceCatalog = async (req: Request, res: Response) => {
 export const updateServiceCatalog = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, description, kategori, standard_price, berlaku_untuk, is_active, durasi_estimasi, garansi } = req.body;
+    const { sku, name, description, kategori, standard_price, berlaku_untuk, is_active, durasi_estimasi, garansi } = req.body;
 
     const data = await prisma.service_catalog.update({
       where: { id: Number(id) },
       data: {
+        sku,
         name,
         description,
         kategori,

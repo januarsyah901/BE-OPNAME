@@ -181,6 +181,7 @@ model transaction_items {
 
 model service_catalog {
   id              Int      @id @default(autoincrement())
+  sku             String?  @unique @db.VarChar(50)
   name            String   @db.VarChar(200)
   description     String?
   kategori        String?  @db.VarChar(100)

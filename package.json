@@ -9,6 +9,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "seed": "tsx src/seeders/seed.ts",
+    "seed:auth": "tsx src/seeders/auth-only.ts",
     "db:push": "prisma db push",
     "prisma:generate": "prisma generate",
     "prisma:pull": "prisma db pull",
