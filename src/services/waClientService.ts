@@ -22,15 +22,31 @@ const updateDbState = async (
   botInfo: { name?: string | null; number?: string | null; avatar?: string | null } = {}
 ) => {
   try {
-    await prisma.bengkel_profile.updateMany({
-      data: {
-        wa_gateway_status: status,
-        wa_gateway_qr: qr,
-        wa_bot_name: botInfo.name,
-        wa_bot_number: botInfo.number,
-        wa_bot_avatar: botInfo.avatar,
-      },
-    });
+    const profile = await prisma.bengkel_profile.findFirst();
+    
+    if (!profile) {
+      await prisma.bengkel_profile.create({
+        data: {
+          name: "AutoService",
+          wa_gateway_status: status,
+          wa_gateway_qr: qr,
+          wa_bot_name: botInfo.name,
+          wa_bot_number: botInfo.number,
+          wa_bot_avatar: botInfo.avatar,
+        },
+      });
+    } else {
+      await prisma.bengkel_profile.update({
+        where: { id: profile.id },
+        data: {
+          wa_gateway_status: status,
+          wa_gateway_qr: qr,
+          wa_bot_name: botInfo.name,
+          wa_bot_number: botInfo.number,
+          wa_bot_avatar: botInfo.avatar,
+        },
+      });
+    }
   } catch (err) {
     console.error("[WA] Failed to update DB state:", err);
   }
