@@ -21,6 +21,7 @@ import settingRoutes from "./routes/settingRoutes";
 import workOrderRoutes from "./routes/workOrderRoutes";
 import vehicleMasterRoutes from "./routes/vehicleMasterRoutes";
 import serviceCatalogRoutes from "./routes/serviceCatalogRoutes";
+import reminderRoutes from "./routes/reminderRoutes";
 
 const app = express();
 app.use(
@@ -102,6 +103,7 @@ app.use("/api/v1/settings", settingRoutes);
 app.use("/api/v1/work-orders", workOrderRoutes);
 app.use("/api/v1/vehicle-masters", vehicleMasterRoutes);
 app.use("/api/v1/service-catalog", serviceCatalogRoutes);
+app.use("/api/v1/reminders", reminderRoutes);
 app.get("/api/docs.json", (req: Request, res: Response) => {
   res.setHeader("Content-Type", "application/json");
   res.send(swaggerSpec);

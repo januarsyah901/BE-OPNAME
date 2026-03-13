@@ -35,6 +35,7 @@ export const updateSettings = async (req: Request, res: Response) => {
     open_time,
     close_time,
     operational_days,
+    tax_percentage
   } = req.body;
 
   try {
@@ -54,6 +55,7 @@ export const updateSettings = async (req: Request, res: Response) => {
         open_time,
         close_time,
         operational_days,
+        tax_percentage: tax_percentage !== undefined ? Number(tax_percentage) : undefined,
       },
       create: {
         id: 1,
@@ -70,6 +72,7 @@ export const updateSettings = async (req: Request, res: Response) => {
         open_time,
         close_time,
         operational_days,
+        tax_percentage: tax_percentage !== undefined ? Number(tax_percentage) : 0,
       },
     });
     return successResponse(res, data, "Settings berhasil diupdate");

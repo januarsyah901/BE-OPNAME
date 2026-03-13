@@ -1,6 +1,7 @@
-import { Client, LocalAuth } from "whatsapp-web.js";
+import { Client, LocalAuth, RemoteAuth } from "whatsapp-web.js";
 import qrcode from "qrcode";
 import prisma from "../config/prisma";
+import { SupabaseStore } from "./SupabaseStore";
 
 type ClientStatus =
   | "initializing"
@@ -58,9 +59,13 @@ export const initWaClient = (): void => {
   console.log("[WA] Initializing WhatsApp Web client...");
   updateDbState("initializing");
 
+  const store = new SupabaseStore({ bucket: 'wa-session' });
+
   waClient = new Client({
-    authStrategy: new LocalAuth({
-      dataPath: ".wwebjs_auth",
+    authStrategy: new RemoteAuth({
+      store: store,
+      backupSyncIntervalMs: 2 * 60 * 1000, // Backup setiap 2 menit
+      dataPath: ".wwebjs_auth"
     }),
     puppeteer: {
       headless: true,
