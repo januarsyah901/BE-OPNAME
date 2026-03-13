@@ -235,7 +235,11 @@ export const updateWorkOrderStatus = async (req: Request, res: Response) => {
 
         const updated = await prisma.work_orders.update({
             where: { id: Number(id) },
-            data: { status }
+            data: { status },
+            include: {
+                customers: { select: { id: true, name: true, phone: true } },
+                vehicles: { select: { id: true, plate_number: true, type: true, brand: true, model: true } }
+            }
         });
         if (
             (status === 'dikerjakan' || status === 'selesai') &&
@@ -274,7 +278,11 @@ export const assignMechanic = async (req: Request, res: Response) => {
 
         const updated = await prisma.work_orders.update({
             where: { id: Number(id) },
-            data: { mekanik: String(mekanik) }
+            data: { mekanik: String(mekanik) },
+            include: {
+                customers: { select: { id: true, name: true, phone: true } },
+                vehicles: { select: { id: true, plate_number: true, type: true, brand: true, model: true } }
+            }
         });
 
         return successResponse(res, updated, `Mekanik "${mekanik}" berhasil ditugaskan`);

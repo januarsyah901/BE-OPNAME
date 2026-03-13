@@ -83,9 +83,9 @@ export const createTransaction = async (req: Request, res: Response) => {
                 user_id: userId,
                 transaction_date: new Date(transaction_date),
                 total_amount,
-                paid_amount: 0,
+                paid_amount: Number(req.body.paid_amount || 0),
                 payment_method: payment_method || 'cash',
-                payment_status: 'belum_bayar',
+                payment_status: req.body.payment_status || 'belum_bayar',
                 notes,
                 invoice_number
             }
@@ -187,6 +187,22 @@ export const getTransactionPdf = async (req: Request, res: Response) => {
         });
         if (!data) return errorResponse(res, 'NOT_FOUND', 'Transaksi tidak ditemukan', 404);
         return successResponse(res, { message: 'PDF generation not yet implemented', invoice_number: data.invoice_number });
+    } catch (e: any) {
+        return errorResponse(res, 'SERVER_ERROR', e.message, 500);
+    }
+};
+// DELETE /transactions/:id
+export const deleteTransaction = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        // Check if exists
+        const tx = await prisma.transactions.findUnique({ where: { id: Number(id) } });
+        if (!tx) return errorResponse(res, 'NOT_FOUND', 'Transaksi tidak ditemukan', 404);
+
+        // Delete (Cascades will handle transaction_items)
+        await prisma.transactions.delete({ where: { id: Number(id) } });
+        
+        return successResponse(res, null, 'Transaksi berhasil dihapus');
     } catch (e: any) {
         return errorResponse(res, 'SERVER_ERROR', e.message, 500);
     }
