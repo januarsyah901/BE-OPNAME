@@ -18,6 +18,10 @@ const options: swaggerJsdoc.Options = {
         },
         servers: [
             {
+                url: '/api/v1',
+                description: 'Auto Detect (Relative Path)'
+            },
+            {
                 url: serverUrl,
                 description: process.env.APP_URL ? 'Production' : 'Local Development'
             }
