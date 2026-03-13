@@ -6,6 +6,7 @@ import {
   getWaQrCode,
   restartWa,
   sendTestNotification,
+  sendManualNotification,
   retryNotification,
   clearNotifications,
 } from "../controllers/notificationController";
@@ -22,6 +23,7 @@ router.delete("/wa", clearNotifications);
 router.get("/wa/status", getWaClientStatus);
 router.get("/wa/qr", getWaQrCode);
 router.post("/wa/restart", restartWa);
+router.post("/wa/send", sendManualNotification);
 router.post("/wa/test", sendTestNotification);
 router.post("/wa/retry/:id", retryNotification);
 

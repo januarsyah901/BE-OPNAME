@@ -114,6 +114,47 @@ export const restartWa = async (req: Request, res: Response) => {
 };
 
 /**
+ * POST /notifications/wa/send
+ * Kirim pesan WA manual (dimasukkan ke antrian)
+ */
+export const sendManualNotification = async (req: Request, res: Response) => {
+    const { phone, message } = req.body;
+
+    if (!phone || !message) {
+        return errorResponse(res, 'VALIDATION_ERROR', 'Phone and message are required', 422);
+    }
+
+    try {
+        const { status } = await getWaStatusFromDb();
+        if (status !== 'ready') {
+            return errorResponse(
+                res,
+                'WA_NOT_READY',
+                `WA client belum siap (status: ${status}). Scan QR terlebih dahulu via Dashboard.`,
+                422
+            );
+        }
+
+        // Masukkan ke antrian (pending)
+        const notif = await prisma.wa_notifications.create({
+            data: {
+                wa_number: phone.replace(/\D/g, ''),
+                message_body: message,
+                status: 'pending'
+            }
+        });
+
+        return successResponse(res, {
+            notification_id: notif.id,
+            to: phone,
+            status: 'pending'
+        }, 'Pesan telah ditambahkan ke antrian pengiriman (Bot).');
+    } catch (e: any) {
+        return errorResponse(res, 'SERVER_ERROR', e.message, 500);
+    }
+};
+
+/**
  * POST /notifications/wa/test
  * Kirim pesan WA test ke nomor owner (dari settings)
  */
