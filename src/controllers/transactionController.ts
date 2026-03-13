@@ -23,8 +23,8 @@ export const listTransactions = async (req: Request, res: Response) => {
             prisma.transactions.findMany({
                 where,
                 include: {
-                    customers: { select: { name: true } },
-                    vehicles: { select: { plate_number: true } },
+                    customers: { select: { name: true, phone: true } },
+                    vehicles: { select: { plate_number: true, type: true, brand: true, model: true } },
                     transaction_items: true
                 },
                 orderBy: { transaction_date: 'desc' },
