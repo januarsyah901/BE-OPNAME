@@ -87,26 +87,24 @@ export const createTransaction = async (req: Request, res: Response) => {
                 payment_method: payment_method || 'cash',
                 payment_status: req.body.payment_status || 'belum_bayar',
                 notes,
-                invoice_number
+                invoice_number,
+                transaction_items: {
+                    create: items.map((item: any) => ({
+                        item_type: item.item_type,
+                        spare_part_id: item.spare_part_id ? Number(item.spare_part_id) : null,
+                        item_name: item.item_name,
+                        quantity: Number(item.quantity),
+                        unit_price: Number(item.unit_price),
+                        subtotal: Number(item.quantity) * Number(item.unit_price)
+                    }))
+                }
             },
             include: {
                 customers: { select: { name: true, phone: true } },
-                vehicles: { select: { plate_number: true, type: true, brand: true, model: true } }
+                vehicles: { select: { plate_number: true, type: true, brand: true, model: true } },
+                transaction_items: true
             }
         });
-
-        // Insert transaction items with subtotal
-        const itemsToInsert = items.map((item: any) => ({
-            transaction_id: transaction.id,
-            item_type: item.item_type,
-            spare_part_id: item.spare_part_id ? Number(item.spare_part_id) : null,
-            item_name: item.item_name,
-            quantity: Number(item.quantity),
-            unit_price: Number(item.unit_price),
-            subtotal: Number(item.quantity) * Number(item.unit_price)
-        }));
-
-        await prisma.transaction_items.createMany({ data: itemsToInsert });
 
         // Kurangi stok & catat movement
         for (const item of items) {
@@ -138,7 +136,7 @@ export const createTransaction = async (req: Request, res: Response) => {
             }
         }
 
-        return successResponse(res, { ...transaction, items: itemsToInsert }, 'Transaksi berhasil dibuat', 201);
+        return successResponse(res, transaction, 'Transaksi berhasil dibuat', 201);
     } catch (e: any) {
         return errorResponse(res, 'SERVER_ERROR', e.message, 500);
     }
