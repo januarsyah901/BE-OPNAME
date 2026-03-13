@@ -88,6 +88,10 @@ export const createTransaction = async (req: Request, res: Response) => {
                 payment_status: req.body.payment_status || 'belum_bayar',
                 notes,
                 invoice_number
+            },
+            include: {
+                customers: { select: { name: true, phone: true } },
+                vehicles: { select: { plate_number: true, type: true, brand: true, model: true } }
             }
         });
 

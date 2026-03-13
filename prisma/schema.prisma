@@ -158,7 +158,7 @@ model transactions {
   payment_status    String             @default("belum_bayar") @db.VarChar(20)
   payment_method    String?            @db.VarChar(50)
   notes             String?
-  transaction_date  DateTime           @db.Date
+  transaction_date  DateTime           @db.Timestamptz(6)
   created_at        DateTime           @default(now()) @db.Timestamptz(6)
   customers         customers?         @relation(fields: [customer_id], references: [id])
   vehicles          vehicles?          @relation(fields: [vehicle_id], references: [id])
