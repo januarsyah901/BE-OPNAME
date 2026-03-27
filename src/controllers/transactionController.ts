@@ -25,7 +25,13 @@ export const listTransactions = async (req: Request, res: Response) => {
                 include: {
                     customers: { select: { name: true, phone: true } },
                     vehicles: { select: { plate_number: true, type: true, brand: true, model: true } },
-                    transaction_items: true
+                    transaction_items: {
+                        include: {
+                            service_bundles: {
+                                include: { items: true }
+                            }
+                        }
+                    }
                 },
                 orderBy: { transaction_date: 'desc' },
                 skip: from,
@@ -92,6 +98,7 @@ export const createTransaction = async (req: Request, res: Response) => {
                     create: items.map((item: any) => ({
                         item_type: item.item_type,
                         spare_part_id: item.spare_part_id ? Number(item.spare_part_id) : null,
+                        bundle_id: item.bundle_id ? Number(item.bundle_id) : null,
                         item_name: item.item_name,
                         quantity: Number(item.quantity),
                         unit_price: Number(item.unit_price),
@@ -150,7 +157,13 @@ export const getTransaction = async (req: Request, res: Response) => {
             include: {
                 customers: { select: { name: true, phone: true } },
                 vehicles: { select: { plate_number: true, type: true, brand: true, model: true } },
-                transaction_items: true
+                transaction_items: {
+                    include: {
+                        service_bundles: {
+                            include: { items: true }
+                        }
+                    }
+                }
             }
         });
         if (!data) return errorResponse(res, 'NOT_FOUND', 'Transaksi tidak ditemukan', 404);

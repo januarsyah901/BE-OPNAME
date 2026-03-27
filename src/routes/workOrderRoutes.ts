@@ -7,7 +7,8 @@ import {
     updateWorkOrder,
     updateWorkOrderStatus,
     assignMechanic,
-    deleteWorkOrder
+    deleteWorkOrder,
+    updateWorkOrderChecklist
 } from '../controllers/workOrderController';
 
 const router = Router();
@@ -20,6 +21,7 @@ router.get('/:id', getWorkOrder);
 router.put('/:id', updateWorkOrder);
 router.patch('/:id/status', updateWorkOrderStatus);
 router.patch('/:id/mechanic', assignMechanic);
+router.patch('/:id/checklist/:checklistId', updateWorkOrderChecklist);
 router.delete('/:id', deleteWorkOrder);
 
 export default router;

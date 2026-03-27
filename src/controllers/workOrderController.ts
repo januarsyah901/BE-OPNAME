@@ -27,7 +27,9 @@ export const listWorkOrders = async (req: Request, res: Response) => {
                 where,
                 include: {
                     customers: { select: { id: true, name: true, phone: true } },
-                    vehicles: { select: { id: true, plate_number: true, type: true, brand: true, model: true } }
+                    vehicles: { select: { id: true, plate_number: true, type: true, brand: true, model: true, frame_number: true } },
+                    service_bundles: true,
+                    checklists: true
                 },
                 orderBy: { waktu_masuk: 'desc' },
                 skip: from,
@@ -59,7 +61,9 @@ export const createWorkOrder = async (req: Request, res: Response) => {
         tipe,
         kendaraan,
         pelanggan,
-        waPelanggan
+        waPelanggan,
+        complaint_log,
+        service_bundle_id
     } = req.body;
 
     if (!layanan) {
@@ -121,23 +125,41 @@ export const createWorkOrder = async (req: Request, res: Response) => {
             return errorResponse(res, 'VALIDATION_ERROR', 'Gagal memproses data Pelanggan atau Kendaraan. Pastikan nama dan plat nomor terisi.', 422);
         }
 
+        // Ambil task checklist dari bundle jika ada
+        let bundleItems: any[] = [];
+        if (service_bundle_id) {
+            const bundle = await prisma.service_bundles.findUnique({
+                where: { id: Number(service_bundle_id) },
+                include: { items: true }
+            });
+            if (bundle) {
+                bundleItems = bundle.items;
+            }
+        }
+
         const wo = await prisma.work_orders.create({
             data: {
                 customer_id: finalCustomerId,
                 vehicle_id: finalVehicleId,
                 layanan: String(layanan),
                 keluhan: keluhan ?? null,
+                complaint_log: complaint_log ?? null,
+                service_bundle_id: service_bundle_id ? Number(service_bundle_id) : null,
                 status: 'menunggu',
                 mekanik: mekanik ?? null,
                 estimasi_biaya: estimasi_biaya ? parseFloat(estimasi_biaya) : 0,
                 estimasi_selesai: estimasi_selesai ?? null,
                 menginap: menginap === true || menginap === 'true',
                 waktu_masuk: new Date(),
-                created_at: new Date()
+                created_at: new Date(),
+                checklists: {
+                    create: bundleItems.map(it => ({ task_name: it.task_name }))
+                }
             },
             include: {
                 customers: { select: { id: true, name: true, phone: true } },
-                vehicles: { select: { id: true, plate_number: true, type: true } }
+                vehicles: { select: { id: true, plate_number: true, type: true } },
+                checklists: true
             }
         });
 
@@ -158,7 +180,9 @@ export const getWorkOrder = async (req: Request, res: Response) => {
             where: { id: Number(id), deleted_at: null },
             include: {
                 customers: { select: { id: true, name: true, phone: true, email: true } },
-                vehicles: { select: { id: true, plate_number: true, type: true, brand: true, model: true, year: true } }
+                vehicles: { select: { id: true, plate_number: true, type: true, brand: true, model: true, year: true, frame_number: true } },
+                service_bundles: true,
+                checklists: true
             }
         });
 
@@ -175,7 +199,7 @@ export const getWorkOrder = async (req: Request, res: Response) => {
 // ===========================================================================
 export const updateWorkOrder = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { layanan, keluhan, estimasi_biaya, estimasi_selesai, menginap, mekanik } = req.body;
+    const { layanan, keluhan, estimasi_biaya, estimasi_selesai, menginap, mekanik, complaint_log, service_bundle_id } = req.body;
 
     try {
         const existing = await prisma.work_orders.findFirst({
@@ -191,7 +215,9 @@ export const updateWorkOrder = async (req: Request, res: Response) => {
                 ...(estimasi_biaya !== undefined && { estimasi_biaya: parseFloat(estimasi_biaya) }),
                 ...(estimasi_selesai !== undefined && { estimasi_selesai }),
                 ...(menginap !== undefined && { menginap: menginap === true || menginap === 'true' }),
-                ...(mekanik !== undefined && { mekanik })
+                ...(mekanik !== undefined && { mekanik }),
+                ...(complaint_log !== undefined && { complaint_log }),
+                ...(service_bundle_id !== undefined && { service_bundle_id: Number(service_bundle_id) })
             },
             include: {
                 customers: { select: { id: true, name: true, phone: true } },
@@ -309,6 +335,23 @@ export const deleteWorkOrder = async (req: Request, res: Response) => {
         });
 
         return successResponse(res, null, 'Work order berhasil dihapus');
+    } catch (e: any) {
+        return errorResponse(res, 'SERVER_ERROR', e.message, 500);
+    }
+};
+// ===========================================================================
+// PATCH /work-orders/:id/checklist/:checklistId
+// ===========================================================================
+export const updateWorkOrderChecklist = async (req: Request, res: Response) => {
+    const { id, checklistId } = req.params;
+    const { is_done } = req.body;
+
+    try {
+        const item = await prisma.work_order_checklists.update({
+            where: { id: Number(checklistId), work_order_id: Number(id) },
+            data: { is_done: is_done === true || is_done === 'true' }
+        });
+        return successResponse(res, item, 'Status checklist berhasil diupdate');
     } catch (e: any) {
         return errorResponse(res, 'SERVER_ERROR', e.message, 500);
     }

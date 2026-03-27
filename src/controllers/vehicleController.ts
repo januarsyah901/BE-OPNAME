@@ -18,15 +18,11 @@ export const listVehicles = async (req: Request, res: Response) => {
 // POST /customers/:customerId/vehicles
 export const createVehicle = async (req: Request, res: Response) => {
     const { customerId } = req.params;
-    const { plate_number, type, brand, model, year } = req.body;
-
-    if (!plate_number || !type) {
-        return errorResponse(res, 'VALIDATION_ERROR', 'plate_number dan type wajib diisi', 422);
-    }
-
+    const { plate_number, type, brand, model, year, frame_number } = req.body;
+// ...
     try {
         const data = await prisma.vehicles.create({
-            data: { customer_id: Number(customerId), plate_number, type, brand, model, year: year ? Number(year) : null }
+            data: { customer_id: Number(customerId), plate_number, type, brand, model, year: year ? Number(year) : null, frame_number }
         });
         return successResponse(res, data, 'Kendaraan berhasil ditambahkan', 201);
     } catch (e: any) {
@@ -40,12 +36,12 @@ export const createVehicle = async (req: Request, res: Response) => {
 // PUT /vehicles/:id
 export const updateVehicle = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { plate_number, type, brand, model, year } = req.body;
+    const { plate_number, type, brand, model, year, frame_number } = req.body;
 
     try {
         const data = await prisma.vehicles.update({
             where: { id: Number(id) },
-            data: { plate_number, type, brand, model, year: year ? Number(year) : null }
+            data: { plate_number, type, brand, model, year: year ? Number(year) : null, frame_number }
         });
         return successResponse(res, data, 'Kendaraan berhasil diupdate');
     } catch (e: any) {

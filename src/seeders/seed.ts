@@ -32,7 +32,10 @@ async function cleanDatabase() {
   await prisma.wa_notifications.deleteMany();
   await prisma.stock_opname_items.deleteMany();
   await prisma.stock_opnames.deleteMany();
+  await prisma.work_order_checklists.deleteMany();
   await prisma.work_orders.deleteMany();
+  await prisma.service_bundle_items.deleteMany();
+  await prisma.service_bundles.deleteMany();
   await prisma.service_catalog.deleteMany();
   await prisma.vehicles.deleteMany();
   await prisma.customers.deleteMany();
@@ -763,6 +766,66 @@ async function seedVehicleMasters() {
   log("Vehicle Masters");
 }
 
+async function seedServiceBundles() {
+  const bundles = [
+    {
+      name: "Paket Lengkap",
+      description: "Servis menyeluruh untuk performa maksimal",
+      price: 250000,
+      tasks: [
+        "Cek & Bersihkan Busi",
+        "Cek Aki & Tegangan",
+        "Setel Karburator/Injeksi",
+        "Cek Tekanan Ban",
+        "Cek Rantai & Pelumasan",
+        "Cek Lampu-lampu",
+        "Cek Rem Depan & Belakang",
+      ],
+    },
+    {
+      name: "Paket Ringan",
+      description: "Servis rutin berkala",
+      price: 150000,
+      tasks: [
+        "Cek Busi",
+        "Cek Aki",
+        "Cek Rantai",
+        "Cek Rem",
+        "Ganti Oli (Jasa)",
+      ],
+    },
+    {
+      name: "Ganti Oli Plus",
+      description: "Ganti oli dan cek poin dasar",
+      price: 85000,
+      tasks: [
+        "Ganti Oli (Jasa)",
+        "Cek Tekanan Ban",
+        "Cek Rem",
+        "Semprot Rantai",
+      ],
+    },
+  ];
+
+  for (const b of bundles) {
+    try {
+      await prisma.service_bundles.create({
+        data: {
+          name: b.name,
+          description: b.description,
+          price: b.price,
+          items: {
+            create: b.tasks.map((t) => ({ task_name: t })),
+          },
+        },
+      });
+    } catch (e: any) {
+      err(`ServiceBundle: ${b.name}`, e);
+    }
+  }
+  log("Service Bundles");
+}
+
 async function main() {
   console.log("\n🌱 Memulai proses seeding database AutoService...\n");
 
@@ -775,6 +838,7 @@ async function main() {
   await seedVehicleMasters();
   await seedVehicles();
   await seedServiceCatalog();
+  await seedServiceBundles();
   await seedTransactions();
 
   console.log("\n🎉 Seeding selesai! Database siap digunakan.\n");

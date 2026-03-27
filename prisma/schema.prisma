@@ -73,6 +73,7 @@ model vehicles {
   brand        String?        @db.VarChar(100)
   model        String?        @db.VarChar(100)
   year         Int?           @db.SmallInt
+  frame_number String?        @db.VarChar(50)
   created_at   DateTime       @default(now()) @db.Timestamptz(6)
   customers    customers      @relation(fields: [customer_id], references: [id], onDelete: Cascade)
   transactions transactions[]
@@ -178,8 +179,10 @@ model transaction_items {
   quantity       Int           @default(1)
   unit_price     Decimal       @default(0) @db.Decimal(15, 2)
   subtotal       Decimal       @default(0) @db.Decimal(15, 2)
+  bundle_id      Int?
   transactions   transactions  @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
   spare_parts    spare_parts?  @relation(fields: [spare_part_id], references: [id])
+  service_bundles service_bundles? @relation(fields: [bundle_id], references: [id])
 }
 
 model service_catalog {
@@ -206,11 +209,44 @@ model work_orders {
   estimasi_biaya   Decimal   @default(0) @db.Decimal(15, 2)
   estimasi_selesai String?   @db.VarChar(50)
   menginap         Boolean   @default(false)
+  complaint_log    String?   @db.Text
+  service_bundle_id Int?
   waktu_masuk      DateTime  @default(now()) @db.Timestamptz(6)
   created_at       DateTime  @default(now()) @db.Timestamptz(6)
   deleted_at       DateTime? @db.Timestamptz(6)
   vehicles         vehicles? @relation(fields: [vehicle_id], references: [id])
   customers        customers? @relation(fields: [customer_id], references: [id])
+  service_bundles  service_bundles? @relation(fields: [service_bundle_id], references: [id])
+  checklists       work_order_checklists[]
+}
+
+model service_bundles {
+  id                Int                    @id @default(autoincrement())
+  name              String                 @db.VarChar(200)
+  description       String?                @db.Text
+  price             Decimal                @default(0) @db.Decimal(15, 2)
+  is_active         Boolean                @default(true)
+  created_at        DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime               @default(now()) @updatedAt @db.Timestamptz(6)
+  items             service_bundle_items[]
+  work_orders       work_orders[]
+  transaction_items transaction_items[]
+}
+
+model service_bundle_items {
+  id        Int             @id @default(autoincrement())
+  bundle_id Int
+  task_name String          @db.VarChar(255)
+  bundles   service_bundles @relation(fields: [bundle_id], references: [id], onDelete: Cascade)
+}
+
+model work_order_checklists {
+  id            Int          @id @default(autoincrement())
+  work_order_id Int
+  task_name     String       @db.VarChar(255)
+  is_done       Boolean      @default(false)
+  updated_at    DateTime     @default(now()) @updatedAt @db.Timestamptz(6)
+  work_orders   work_orders  @relation(fields: [work_order_id], references: [id], onDelete: Cascade)
 }
 
 model wa_notifications {

@@ -50,8 +50,9 @@ Sistem notifikasi otomatis via **WhatsApp Web.js** (whatsapp-web.js) — terhubu
 
 Modul untuk mendata pelanggan dan membuat dokumen penerimaan sebelum diservis.
 
-- **Data Customer**: Nama, nomor WA, dan daftar kendaraan yang dimiliki.
-- **Penerimaan / Work Order**: Pencatatan awal saat mobil datang. Berisi keluhan pelanggan, catatan mekanik, dan penentuan apakah kendaraan **Menginap** atau tidak.
+- **Data Customer**: Nama, nomor WA, dan daftar kendaraan yang dimiliki. **Nomor Rangka (VIN)**: Penambahan field `frame_number` pada database kendaraan (Nullable/opsional).
+- **Penerimaan / Work Order**: Pencatatan awal saat mobil datang. Berisi **Catatan Keluhan (Complaint Log)** untuk mencatat masalah spesifik yang dikeluhkan pelanggan (misal: "Rem bunyi mencit", "Gas brebet"), catatan mekanik, dan penentuan apakah kendaraan **Menginap** atau tidak.
+- **Status Checklist**: Mekanik bisa menandai poin mana saja yang sudah dikerjakan melalui dashboard (jika akses diberikan).
 - **Estimasi Biaya (Quotation)**: Perkiraan awal biaya jasa dan sparepart yang disampaikan ke pelanggan sebelum pengerjaan.
 - **Riwayat Kunjungan**: Histori servis tiap customer (tanggal, keluhan, sparepart, total bayar).
 
@@ -59,7 +60,7 @@ Modul untuk mendata pelanggan dan membuat dokumen penerimaan sebelum diservis.
 
 Pencatatan transaksi sebagai pengganti nota manual, terintegrasi dengan data Work Order.
 
-- **Buat Nota Servis**: Konversi dari Work Order / Estimasi menjadi nota aktual (scan/input barcode jika ada tambahan).
+- **Buat Nota Servis**: Konversi dari Work Order / Estimasi menjadi nota aktual. **Detail Itemized**: Di dalam Nota/Invoice, paket service tidak hanya muncul sebagai satu baris "Paket Lengkap", tapi menampilkan rincian poin pemeriksaan di bawahnya (scan/input barcode tetap tersedia untuk tambahan sparepart diluar paket).
 - **Total Tagihan**: Kalkulasi otomatis (termasuk diskon/pajak jika ada).
 - **Status Bayar**: Lunas / Belum Lunas / DP.
 - **Cetak Nota**: Export PDF A4 atau layout thermal.
@@ -79,6 +80,14 @@ Menggantikan pencatatan omset manual di komputer.
 - **Manajemen User & Role**: Owner, Admin, Kasir (3 Role Sistem). Tambah / edit akun oleh Owner atau Admin. Akun Owner tidak bisa dibuat atau dihapus via panel.
 - **Permission Editor** _(Owner only)_: Owner dapat mengatur halaman mana yang boleh diakses oleh Admin dan Kasir. Perubahan disimpan di local storage dan diterapkan ke sidebar + route guard secara langsung.
 - **Konfigurasi WA**: Setup nomor tujuan notif stok (`wa_target_number`). Koneksi WA menggunakan WhatsApp Web.js — tidak memerlukan token gateway eksternal.
+
+### 8. Modul Master Paket Service (Service Bundling)
+
+Fitur ini memungkinkan Admin/Owner menentukan paket layanan tetap sehingga kasir tidak perlu input manual satu per satu poin pemeriksaan.
+
+- **Katalog Paket**: Daftar paket layanan (Lengkap, Ringan, Ganti Oli Plus).
+- **Poin Pemeriksaan (Checklist)**: Tiap paket memiliki daftar itemized job (contoh: Setel Karburator, Cek Aki, dll) yang akan otomatis muncul di pratinjau nota/SPK.
+- **Pricing**: Harga paket bersifat fixed untuk jasa, namun penggantian sparepart (oli, busi, dll) tetap dihitung berdasarkan stok keluar di modul inventori.
 
 ---
 
