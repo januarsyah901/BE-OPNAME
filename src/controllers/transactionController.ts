@@ -71,8 +71,14 @@ export const createTransaction = async (req: Request, res: Response) => {
             }
         }
 
-        // Hitung total
-        const total_amount = items.reduce((sum: number, item: any) => sum + (item.quantity * item.unit_price), 0);
+        // Hitung subtotal & total
+        const subtotal = items.reduce((sum: number, item: any) => sum + (Number(item.quantity) * Number(item.unit_price)), 0);
+        
+        // Ambil setting pajak
+        const profile = await prisma.bengkel_profile.findFirst({ where: { id: 1 } });
+        const tax_percentage = Number(profile?.tax_percentage || 0);
+        const tax_amount = (subtotal * tax_percentage) / 100;
+        const total_amount = subtotal + tax_amount;
 
         // Generate invoice number
         const today = new Date();
@@ -88,7 +94,10 @@ export const createTransaction = async (req: Request, res: Response) => {
                 vehicle_id: Number(vehicle_id),
                 user_id: userId,
                 transaction_date: new Date(transaction_date),
+                subtotal_amount: subtotal,
                 total_amount,
+                tax_percentage,
+                tax_amount,
                 paid_amount: Number(req.body.paid_amount || 0),
                 payment_method: payment_method || 'cash',
                 payment_status: req.body.payment_status || 'belum_bayar',

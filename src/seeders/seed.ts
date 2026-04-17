@@ -61,7 +61,7 @@ async function seedUsers() {
     },
     {
       name: "Kasir Satu",
-      username: "kasir1",
+      username: "kasir",
       password: "kasir123",
       role: "kasir",
     },
@@ -417,6 +417,7 @@ async function seedVehicles() {
       brand: "Toyota",
       model: "Avanza",
       year: 2019,
+      frame_number: "MHF123A123B456C78",
     },
     {
       customer_idx: 0,
@@ -425,6 +426,7 @@ async function seedVehicles() {
       brand: "Honda",
       model: "Beat",
       year: 2021,
+      frame_number: "MH1HB211XDKXXXXXX",
     },
     {
       customer_idx: 1,
@@ -474,6 +476,7 @@ async function seedVehicles() {
           brand: v.brand,
           model: v.model,
           year: v.year,
+          frame_number: v.frame_number || null,
         },
       });
     } catch (e: any) {
@@ -826,6 +829,62 @@ async function seedServiceBundles() {
   log("Service Bundles");
 }
 
+async function seedWorkOrders() {
+  const customers = await prisma.customers.findMany({ where: { deleted_at: null } });
+  const vehicles = await prisma.vehicles.findMany();
+  const bundles = await prisma.service_bundles.findMany({ include: { items: true } });
+
+  if (!customers.length || !vehicles.length || !bundles.length) return;
+
+  const wos = [
+    {
+      customer_id: customers[0].id,
+      vehicle_id: vehicles[0].id,
+      layanan: "Servis Rutin " + bundles[0].name,
+      keluhan: "Ganti oli dan cek rem",
+      service_bundle_id: bundles[0].id,
+      status: "menunggu",
+      estimasi_biaya: Number(bundles[0].price),
+      checklists: bundles[0].items.map(it => ({ task_name: it.task_name }))
+    },
+    {
+      customer_id: customers[0].id,
+      vehicle_id: vehicles[1].id,
+      layanan: "Servis Paket " + bundles[1].name,
+      keluhan: "Motor agak brebet di tarikan awal",
+      service_bundle_id: bundles[1].id,
+      status: "dikerjakan",
+      mekanik: "Samsul",
+      estimasi_biaya: Number(bundles[1].price),
+      checklists: bundles[1].items.map(it => ({ task_name: it.task_name }))
+    }
+  ];
+
+  for (const wo of wos) {
+    try {
+      await prisma.work_orders.create({
+        data: {
+          customer_id: wo.customer_id,
+          vehicle_id: wo.vehicle_id,
+          layanan: wo.layanan,
+          keluhan: wo.keluhan,
+          status: wo.status,
+          mekanik: wo.mekanik || null,
+          estimasi_biaya: wo.estimasi_biaya,
+          waktu_masuk: new Date(),
+          service_bundle_id: wo.service_bundle_id,
+          checklists: {
+            create: wo.checklists
+          }
+        }
+      });
+    } catch (e: any) {
+      err("WorkOrder Seeder", e);
+    }
+  }
+  log("Work Orders");
+}
+
 async function main() {
   console.log("\n🌱 Memulai proses seeding database AutoService...\n");
 
@@ -839,6 +898,7 @@ async function main() {
   await seedVehicles();
   await seedServiceCatalog();
   await seedServiceBundles();
+  await seedWorkOrders();
   await seedTransactions();
 
   console.log("\n🎉 Seeding selesai! Database siap digunakan.\n");

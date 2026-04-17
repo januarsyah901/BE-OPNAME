@@ -8,52 +8,59 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateVehicle = exports.createVehicle = exports.listVehicles = void 0;
-const supabase_1 = require("../config/supabase");
+const prisma_1 = __importDefault(require("../config/prisma"));
 const response_1 = require("../utils/response");
 // GET /customers/:customerId/vehicles
 const listVehicles = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { customerId } = req.params;
-    const { data, error } = yield supabase_1.supabase
-        .from('vehicles')
-        .select('*')
-        .eq('customer_id', customerId)
-        .order('id');
-    if (error)
-        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', error.message, 500);
-    return (0, response_1.successResponse)(res, data);
+    try {
+        const data = yield prisma_1.default.vehicles.findMany({
+            where: { customer_id: Number(req.params.customerId) },
+            orderBy: { id: 'asc' }
+        });
+        return (0, response_1.successResponse)(res, data);
+    }
+    catch (e) {
+        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', e.message, 500);
+    }
 });
 exports.listVehicles = listVehicles;
 // POST /customers/:customerId/vehicles
 const createVehicle = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { customerId } = req.params;
-    const { plate_number, type, brand, model, year } = req.body;
-    if (!plate_number || !type) {
-        return (0, response_1.errorResponse)(res, 'VALIDATION_ERROR', 'plate_number dan type wajib diisi', 422);
+    const { plate_number, type, brand, model, year, frame_number } = req.body;
+    // ...
+    try {
+        const data = yield prisma_1.default.vehicles.create({
+            data: { customer_id: Number(customerId), plate_number, type, brand, model, year: year ? Number(year) : null, frame_number }
+        });
+        return (0, response_1.successResponse)(res, data, 'Kendaraan berhasil ditambahkan', 201);
     }
-    const { data, error } = yield supabase_1.supabase
-        .from('vehicles')
-        .insert([{ customer_id: customerId, plate_number, type, brand, model, year }])
-        .select()
-        .single();
-    if (error)
-        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', error.message, 500);
-    return (0, response_1.successResponse)(res, data, 'Kendaraan berhasil ditambahkan', 201);
+    catch (e) {
+        if (e.code === 'P2002') {
+            return (0, response_1.errorResponse)(res, 'CONFLICT', 'Nomor plat sudah terdaftar di sistem', 409);
+        }
+        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', e.message, 500);
+    }
 });
 exports.createVehicle = createVehicle;
 // PUT /vehicles/:id
 const updateVehicle = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
-    const { plate_number, type, brand, model, year } = req.body;
-    const { data, error } = yield supabase_1.supabase
-        .from('vehicles')
-        .update({ plate_number, type, brand, model, year, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-    if (error || !data)
+    const { plate_number, type, brand, model, year, frame_number } = req.body;
+    try {
+        const data = yield prisma_1.default.vehicles.update({
+            where: { id: Number(id) },
+            data: { plate_number, type, brand, model, year: year ? Number(year) : null, frame_number }
+        });
+        return (0, response_1.successResponse)(res, data, 'Kendaraan berhasil diupdate');
+    }
+    catch (e) {
         return (0, response_1.errorResponse)(res, 'NOT_FOUND', 'Kendaraan tidak ditemukan', 404);
-    return (0, response_1.successResponse)(res, data, 'Kendaraan berhasil diupdate');
+    }
 });
 exports.updateVehicle = updateVehicle;

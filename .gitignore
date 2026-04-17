@@ -7,3 +7,4 @@ node_modules
 # WhatsApp Web.js session (credential WA — jangan di-commit)
 .wwebjs_auth/
 .wwebjs_cache/
+dist

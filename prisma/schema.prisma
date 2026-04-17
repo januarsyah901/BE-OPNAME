@@ -157,6 +157,9 @@ model transactions {
   customer_id       Int?
   vehicle_id        Int?
   user_id           Int
+  subtotal_amount   Decimal            @default(0) @db.Decimal(15, 2)
+  tax_percentage    Decimal            @default(0) @db.Decimal(5, 2)
+  tax_amount        Decimal            @default(0) @db.Decimal(15, 2)
   total_amount      Decimal            @default(0) @db.Decimal(15, 2)
   paid_amount       Decimal            @default(0) @db.Decimal(15, 2)
   payment_status    String             @default("belum_bayar") @db.VarChar(20)

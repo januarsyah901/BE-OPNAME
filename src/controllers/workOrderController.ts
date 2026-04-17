@@ -51,17 +51,18 @@ export const createWorkOrder = async (req: Request, res: Response) => {
     const {
         customer_id,
         vehicle_id,
+        noPolisi,
+        noRangka,
+        tipe,
+        kendaraan,
+        pelanggan,
+        waPelanggan,
         layanan,
         keluhan,
         estimasi_biaya,
         estimasi_selesai,
         menginap,
         mekanik,
-        noPolisi,
-        tipe,
-        kendaraan,
-        pelanggan,
-        waPelanggan,
         complaint_log,
         service_bundle_id
     } = req.body;
@@ -102,6 +103,13 @@ export const createWorkOrder = async (req: Request, res: Response) => {
             });
 
             if (existingVehicle) {
+                // Update frame_number if provided
+                if (noRangka) {
+                    await prisma.vehicles.update({
+                        where: { id: existingVehicle.id },
+                        data: { frame_number: String(noRangka) }
+                    });
+                }
                 finalVehicleId = existingVehicle.id;
             } else if (finalCustomerId) {
                 const parts = String(kendaraan || '').split(' ');
@@ -114,7 +122,8 @@ export const createWorkOrder = async (req: Request, res: Response) => {
                         plate_number: plate,
                         type: String(tipe || 'Mobil'),
                         brand,
-                        model
+                        model,
+                        frame_number: noRangka ? String(noRangka) : null
                     }
                 });
                 finalVehicleId = newVehicle.id;
@@ -158,7 +167,7 @@ export const createWorkOrder = async (req: Request, res: Response) => {
             },
             include: {
                 customers: { select: { id: true, name: true, phone: true } },
-                vehicles: { select: { id: true, plate_number: true, type: true } },
+                vehicles: { select: { id: true, plate_number: true, type: true, brand: true, model: true, frame_number: true } },
                 checklists: true
             }
         });
@@ -199,13 +208,21 @@ export const getWorkOrder = async (req: Request, res: Response) => {
 // ===========================================================================
 export const updateWorkOrder = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { layanan, keluhan, estimasi_biaya, estimasi_selesai, menginap, mekanik, complaint_log, service_bundle_id } = req.body;
+    const { noRangka, layanan, keluhan, estimasi_biaya, estimasi_selesai, menginap, mekanik, complaint_log, service_bundle_id } = req.body;
 
     try {
         const existing = await prisma.work_orders.findFirst({
             where: { id: Number(id), deleted_at: null }
         });
         if (!existing) return errorResponse(res, 'NOT_FOUND', 'Work order tidak ditemukan', 404);
+
+        // Update vehicle frame number if provided
+        if (noRangka && existing.vehicle_id) {
+            await prisma.vehicles.update({
+                where: { id: existing.vehicle_id },
+                data: { frame_number: String(noRangka) }
+            });
+        }
 
         const updated = await prisma.work_orders.update({
             where: { id: Number(id) },
@@ -217,11 +234,12 @@ export const updateWorkOrder = async (req: Request, res: Response) => {
                 ...(menginap !== undefined && { menginap: menginap === true || menginap === 'true' }),
                 ...(mekanik !== undefined && { mekanik }),
                 ...(complaint_log !== undefined && { complaint_log }),
-                ...(service_bundle_id !== undefined && { service_bundle_id: Number(service_bundle_id) })
+                ...(service_bundle_id !== undefined && { service_bundle_id: service_bundle_id ? Number(service_bundle_id) : null })
             },
             include: {
                 customers: { select: { id: true, name: true, phone: true } },
-                vehicles: { select: { plate_number: true } }
+                vehicles: { select: { id: true, plate_number: true, type: true, brand: true, model: true, frame_number: true } },
+                checklists: true
             }
         });
 
@@ -307,7 +325,7 @@ export const assignMechanic = async (req: Request, res: Response) => {
             data: { mekanik: String(mekanik) },
             include: {
                 customers: { select: { id: true, name: true, phone: true } },
-                vehicles: { select: { id: true, plate_number: true, type: true, brand: true, model: true } }
+                vehicles: { select: { id: true, plate_number: true, type: true, brand: true, model: true, frame_number: true } }
             }
         });
 

@@ -10,4 +10,5 @@ router.post('/', transactionController_1.createTransaction);
 router.get('/:id', transactionController_1.getTransaction);
 router.patch('/:id/payment', transactionController_1.updatePayment);
 router.get('/:id/pdf', transactionController_1.getTransactionPdf);
+router.delete('/:id', transactionController_1.deleteTransaction);
 exports.default = router;

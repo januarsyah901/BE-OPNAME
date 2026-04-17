@@ -9,23 +9,23 @@ const env_1 = require("../config/env");
 const response_1 = require("../utils/response");
 const authenticate = (req, res, next) => {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return (0, response_1.errorResponse)(res, 'UNAUTHORIZED', 'Token tidak ditemukan', 401);
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return (0, response_1.errorResponse)(res, "UNAUTHORIZED", "Token tidak ditemukan", 401);
     }
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.split(" ")[1];
     try {
-        const decoded = jsonwebtoken_1.default.verify(token, env_1.config.jwtSecret || 'supersecretkey');
+        const decoded = jsonwebtoken_1.default.verify(token, env_1.config.jwtSecret || "supersecretkey");
         req.user = decoded;
         next();
     }
     catch (err) {
-        return (0, response_1.errorResponse)(res, 'UNAUTHORIZED', 'Token tidak valid atau sudah expired', 401);
+        return (0, response_1.errorResponse)(res, "UNAUTHORIZED", "Token tidak valid atau sudah expired", 401);
     }
 };
 exports.authenticate = authenticate;
 const authorizeAdmin = (req, res, next) => {
-    if (!req.user || req.user.role !== 'admin') {
-        return (0, response_1.errorResponse)(res, 'FORBIDDEN', 'Hanya admin yang bisa mengakses resource ini', 403);
+    if (!req.user || !["admin", "owner"].includes(req.user.role)) {
+        return (0, response_1.errorResponse)(res, "FORBIDDEN", "Hanya admin yang bisa mengakses resource ini", 403);
     }
     next();
 };

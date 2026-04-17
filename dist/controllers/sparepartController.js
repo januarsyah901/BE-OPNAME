@@ -8,37 +8,44 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.printBarcode = exports.getBarcode = exports.deleteSparePart = exports.updateSparePart = exports.getSparePart = exports.createSparePart = exports.listSpareParts = void 0;
-const supabase_1 = require("../config/supabase");
+const prisma_1 = __importDefault(require("../config/prisma"));
 const response_1 = require("../utils/response");
 const helpers_1 = require("../utils/helpers");
 // GET /spare-parts
 const listSpareParts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const page = parseInt(req.query.page) || 1;
-    const { from, to, perPage } = (0, helpers_1.getPagination)(page);
+    const { from, perPage } = (0, helpers_1.getPagination)(page);
     const { category_id, low_stock, search } = req.query;
-    let query = supabase_1.supabase
-        .from('spare_parts')
-        .select('*, categories(name)', { count: 'exact' })
-        .is('deleted_at', null)
-        .order('id')
-        .range(from, to);
-    if (category_id)
-        query = query.eq('category_id', category_id);
-    if (low_stock === 'true')
-        query = query.lt('current_stock', supabase_1.supabase.rpc);
-    if (search)
-        query = query.ilike('name', `%${search}%`);
-    const { data, error, count } = yield query;
-    if (error)
-        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', error.message, 500);
-    // Filter low_stock manually if needed (stock < minimum_stock)
-    let result = data || [];
-    if (low_stock === 'true') {
-        result = result.filter((item) => item.current_stock < item.minimum_stock);
+    try {
+        const where = { deleted_at: null };
+        if (category_id)
+            where.category_id = Number(category_id);
+        if (search)
+            where.name = { contains: search, mode: 'insensitive' };
+        const [allData, total] = yield Promise.all([
+            prisma_1.default.spare_parts.findMany({
+                where,
+                include: { categories: { select: { name: true } } },
+                orderBy: { id: 'asc' },
+                skip: from,
+                take: perPage
+            }),
+            prisma_1.default.spare_parts.count({ where })
+        ]);
+        let result = allData;
+        if (low_stock === 'true') {
+            result = allData.filter((item) => item.current_stock < item.minimum_stock);
+        }
+        return (0, response_1.successResponse)(res, result, 'OK', 200, { page, total, per_page: perPage });
     }
-    return (0, response_1.successResponse)(res, result, 'OK', 200, { page, total: count || 0, per_page: perPage });
+    catch (e) {
+        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', e.message, 500);
+    }
 });
 exports.listSpareParts = listSpareParts;
 // POST /spare-parts
@@ -47,99 +54,129 @@ const createSparePart = (req, res) => __awaiter(void 0, void 0, void 0, function
     if (!name || cost_price === undefined || sell_price === undefined) {
         return (0, response_1.errorResponse)(res, 'VALIDATION_ERROR', 'name, cost_price, sell_price wajib diisi', 422);
     }
-    // Insert first to get the ID, then update SKU
-    const { data: inserted, error: insertErr } = yield supabase_1.supabase
-        .from('spare_parts')
-        .insert([{ category_id, name, cost_price, sell_price, current_stock: current_stock || 0, minimum_stock: minimum_stock || 0, unit: unit || 'pcs', sku: 'TEMP', barcode_value: 'TEMP' }])
-        .select()
-        .single();
-    if (insertErr)
-        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', insertErr.message, 500);
-    // Get category name for SKU prefix
-    let categoryName = 'GEN';
-    if (category_id) {
-        const { data: cat } = yield supabase_1.supabase.from('categories').select('name').eq('id', category_id).single();
-        if (cat)
-            categoryName = cat.name;
+    try {
+        // Insert first to get ID, then update SKU
+        const inserted = yield prisma_1.default.spare_parts.create({
+            data: {
+                category_id: category_id ? Number(category_id) : null,
+                name,
+                cost_price: Number(cost_price),
+                sell_price: Number(sell_price),
+                current_stock: current_stock !== undefined ? Number(current_stock) : 0,
+                minimum_stock: minimum_stock !== undefined ? Number(minimum_stock) : 0,
+                unit: unit || 'pcs',
+                sku: 'TEMP',
+                barcode_value: 'TEMP'
+            }
+        });
+        // Get category name for SKU prefix
+        let categoryName = 'GEN';
+        if (category_id) {
+            const cat = yield prisma_1.default.categories.findUnique({ where: { id: Number(category_id) } });
+            if (cat)
+                categoryName = cat.name;
+        }
+        const sku = (0, helpers_1.generateSKU)(categoryName, inserted.id);
+        const data = yield prisma_1.default.spare_parts.update({
+            where: { id: inserted.id },
+            data: { sku, barcode_value: sku }
+        });
+        return (0, response_1.successResponse)(res, data, 'Spare part berhasil ditambahkan', 201);
     }
-    const sku = (0, helpers_1.generateSKU)(categoryName, inserted.id);
-    const { data, error } = yield supabase_1.supabase
-        .from('spare_parts')
-        .update({ sku, barcode_value: sku })
-        .eq('id', inserted.id)
-        .select()
-        .single();
-    if (error)
-        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', error.message, 500);
-    return (0, response_1.successResponse)(res, data, 'Spare part berhasil ditambahkan', 201);
+    catch (e) {
+        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', e.message, 500);
+    }
 });
 exports.createSparePart = createSparePart;
 // GET /spare-parts/:id
 const getSparePart = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    const { data, error } = yield supabase_1.supabase
-        .from('spare_parts')
-        .select('*, categories(name), stock_movements(*)')
-        .eq('id', id)
-        .is('deleted_at', null)
-        .single();
-    if (error || !data)
-        return (0, response_1.errorResponse)(res, 'NOT_FOUND', 'Spare part tidak ditemukan', 404);
-    return (0, response_1.successResponse)(res, data);
+    try {
+        const data = yield prisma_1.default.spare_parts.findFirst({
+            where: { id: Number(req.params.id), deleted_at: null },
+            include: { categories: { select: { name: true } }, stock_movements: true }
+        });
+        if (!data)
+            return (0, response_1.errorResponse)(res, 'NOT_FOUND', 'Spare part tidak ditemukan', 404);
+        return (0, response_1.successResponse)(res, data);
+    }
+    catch (e) {
+        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', e.message, 500);
+    }
 });
 exports.getSparePart = getSparePart;
 // PUT /spare-parts/:id
 const updateSparePart = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
     const { category_id, name, cost_price, sell_price, minimum_stock, unit } = req.body;
-    const { data, error } = yield supabase_1.supabase
-        .from('spare_parts')
-        .update({ category_id, name, cost_price, sell_price, minimum_stock, unit, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .is('deleted_at', null)
-        .select()
-        .single();
-    if (error || !data)
+    try {
+        const existing = yield prisma_1.default.spare_parts.findFirst({ where: { id: Number(id), deleted_at: null } });
+        if (!existing)
+            return (0, response_1.errorResponse)(res, 'NOT_FOUND', 'Spare part tidak ditemukan', 404);
+        const data = yield prisma_1.default.spare_parts.update({
+            where: { id: Number(id) },
+            data: {
+                category_id: category_id !== undefined ? Number(category_id) : undefined,
+                name,
+                cost_price: cost_price !== undefined ? Number(cost_price) : undefined,
+                sell_price: sell_price !== undefined ? Number(sell_price) : undefined,
+                minimum_stock: minimum_stock !== undefined ? Number(minimum_stock) : undefined,
+                unit,
+                updated_at: new Date()
+            }
+        });
+        return (0, response_1.successResponse)(res, data, 'Spare part berhasil diupdate');
+    }
+    catch (e) {
         return (0, response_1.errorResponse)(res, 'NOT_FOUND', 'Spare part tidak ditemukan', 404);
-    return (0, response_1.successResponse)(res, data, 'Spare part berhasil diupdate');
+    }
 });
 exports.updateSparePart = updateSparePart;
 // DELETE /spare-parts/:id (soft delete)
 const deleteSparePart = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { error } = yield supabase_1.supabase
-        .from('spare_parts')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', req.params.id)
-        .is('deleted_at', null);
-    if (error)
-        return (0, response_1.errorResponse)(res, 'NOT_FOUND', 'Spare part tidak ditemukan', 404);
-    return (0, response_1.successResponse)(res, null, 'Spare part berhasil dihapus');
+    try {
+        const existing = yield prisma_1.default.spare_parts.findFirst({ where: { id: Number(req.params.id), deleted_at: null } });
+        if (!existing)
+            return (0, response_1.errorResponse)(res, 'NOT_FOUND', 'Spare part tidak ditemukan', 404);
+        yield prisma_1.default.spare_parts.update({
+            where: { id: Number(req.params.id) },
+            data: { deleted_at: new Date() }
+        });
+        return (0, response_1.successResponse)(res, null, 'Spare part berhasil dihapus');
+    }
+    catch (e) {
+        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', e.message, 500);
+    }
 });
 exports.deleteSparePart = deleteSparePart;
 // GET /spare-parts/:id/barcode
 const getBarcode = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    const { data, error } = yield supabase_1.supabase
-        .from('spare_parts')
-        .select('id, sku, barcode_value, barcode_image_url')
-        .eq('id', id)
-        .single();
-    if (error || !data)
-        return (0, response_1.errorResponse)(res, 'NOT_FOUND', 'Spare part tidak ditemukan', 404);
-    return (0, response_1.successResponse)(res, data);
+    try {
+        const data = yield prisma_1.default.spare_parts.findUnique({
+            where: { id: Number(req.params.id) },
+            select: { id: true, sku: true, barcode_value: true, barcode_image_url: true }
+        });
+        if (!data)
+            return (0, response_1.errorResponse)(res, 'NOT_FOUND', 'Spare part tidak ditemukan', 404);
+        return (0, response_1.successResponse)(res, data);
+    }
+    catch (e) {
+        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', e.message, 500);
+    }
 });
 exports.getBarcode = getBarcode;
 // POST /spare-parts/:id/barcode/print
 const printBarcode = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    const { data, error } = yield supabase_1.supabase
-        .from('spare_parts')
-        .select('id, sku, barcode_value, name')
-        .eq('id', id)
-        .single();
-    if (error || !data)
-        return (0, response_1.errorResponse)(res, 'NOT_FOUND', 'Spare part tidak ditemukan', 404);
-    // TODO: Integrate PDF generation (e.g., puppeteer or pdfkit)
-    return (0, response_1.successResponse)(res, { message: 'PDF generation not yet implemented', barcode_value: data.barcode_value });
+    try {
+        const data = yield prisma_1.default.spare_parts.findUnique({
+            where: { id: Number(req.params.id) },
+            select: { id: true, sku: true, barcode_value: true, name: true }
+        });
+        if (!data)
+            return (0, response_1.errorResponse)(res, 'NOT_FOUND', 'Spare part tidak ditemukan', 404);
+        return (0, response_1.successResponse)(res, { message: 'PDF generation not yet implemented', barcode_value: data.barcode_value });
+    }
+    catch (e) {
+        return (0, response_1.errorResponse)(res, 'SERVER_ERROR', e.message, 500);
+    }
 });
 exports.printBarcode = printBarcode;

@@ -59,12 +59,9 @@ export const initWaClient = (): void => {
   console.log("[WA] Initializing WhatsApp Web client...");
   updateDbState("initializing");
 
-  const store = new SupabaseStore({ bucket: 'wa-session' });
-
   waClient = new Client({
-    authStrategy: new RemoteAuth({
-      store: store,
-      backupSyncIntervalMs: 2 * 60 * 1000, // Backup setiap 2 menit
+    authStrategy: new LocalAuth({
+      clientId: "RemoteAuth",
       dataPath: ".wwebjs_auth"
     }),
     puppeteer: {
