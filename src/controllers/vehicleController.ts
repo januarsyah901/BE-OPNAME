@@ -19,7 +19,10 @@ export const listVehicles = async (req: Request, res: Response) => {
 export const createVehicle = async (req: Request, res: Response) => {
     const { customerId } = req.params;
     const { plate_number, type, brand, model, year, frame_number } = req.body;
-// ...
+
+    if (!brand || !model) {
+        return errorResponse(res, 'VALIDATION_ERROR', 'Merek dan Model kendaraan wajib diisi', 422);
+    }
     try {
         const data = await prisma.vehicles.create({
             data: { customer_id: Number(customerId), plate_number, type, brand, model, year: year ? Number(year) : null, frame_number }
@@ -37,6 +40,10 @@ export const createVehicle = async (req: Request, res: Response) => {
 export const updateVehicle = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { plate_number, type, brand, model, year, frame_number } = req.body;
+
+    if (brand === '' || model === '') {
+        return errorResponse(res, 'VALIDATION_ERROR', 'Merek dan Model kendaraan tidak boleh kosong', 422);
+    }
 
     try {
         const data = await prisma.vehicles.update({

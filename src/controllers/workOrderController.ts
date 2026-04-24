@@ -67,9 +67,11 @@ export const createWorkOrder = async (req: Request, res: Response) => {
         service_bundle_id
     } = req.body;
 
-    if (!layanan) {
+    if (!layanan || (Array.isArray(layanan) && layanan.length === 0)) {
         return errorResponse(res, 'VALIDATION_ERROR', 'Layanan wajib diisi', 422);
     }
+
+    const formattedLayanan = Array.isArray(layanan) ? layanan.join(', ') : String(layanan);
 
     try {
         let finalCustomerId = customer_id ? Number(customer_id) : null;
@@ -112,9 +114,13 @@ export const createWorkOrder = async (req: Request, res: Response) => {
                 }
                 finalVehicleId = existingVehicle.id;
             } else if (finalCustomerId) {
-                const parts = String(kendaraan || '').split(' ');
-                const brand = parts[0] || 'Unknown';
-                const model = parts.slice(1).join(' ') || 'Unit';
+                const parts = String(kendaraan || '').trim().split(/\s+/);
+                const brand = parts[0];
+                const model = parts.slice(1).join(' ');
+
+                if (!brand || !model) {
+                    return errorResponse(res, 'VALIDATION_ERROR', 'Merek dan Model kendaraan wajib diisi (contoh: "Honda Vario")', 422);
+                }
 
                 const newVehicle = await prisma.vehicles.create({
                     data: {
@@ -150,7 +156,7 @@ export const createWorkOrder = async (req: Request, res: Response) => {
             data: {
                 customer_id: finalCustomerId,
                 vehicle_id: finalVehicleId,
-                layanan: String(layanan),
+                layanan: formattedLayanan,
                 keluhan: keluhan ?? null,
                 complaint_log: complaint_log ?? null,
                 service_bundle_id: service_bundle_id ? Number(service_bundle_id) : null,
@@ -227,7 +233,9 @@ export const updateWorkOrder = async (req: Request, res: Response) => {
         const updated = await prisma.work_orders.update({
             where: { id: Number(id) },
             data: {
-                ...(layanan !== undefined && { layanan: String(layanan) }),
+                ...(layanan !== undefined && { 
+                    layanan: Array.isArray(layanan) ? layanan.join(', ') : String(layanan) 
+                }),
                 ...(keluhan !== undefined && { keluhan }),
                 ...(estimasi_biaya !== undefined && { estimasi_biaya: parseFloat(estimasi_biaya) }),
                 ...(estimasi_selesai !== undefined && { estimasi_selesai }),

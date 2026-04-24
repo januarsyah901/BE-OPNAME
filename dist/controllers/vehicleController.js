@@ -33,7 +33,9 @@ exports.listVehicles = listVehicles;
 const createVehicle = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { customerId } = req.params;
     const { plate_number, type, brand, model, year, frame_number } = req.body;
-    // ...
+    if (!brand || !model) {
+        return (0, response_1.errorResponse)(res, 'VALIDATION_ERROR', 'Merek dan Model kendaraan wajib diisi', 422);
+    }
     try {
         const data = yield prisma_1.default.vehicles.create({
             data: { customer_id: Number(customerId), plate_number, type, brand, model, year: year ? Number(year) : null, frame_number }
@@ -52,6 +54,9 @@ exports.createVehicle = createVehicle;
 const updateVehicle = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
     const { plate_number, type, brand, model, year, frame_number } = req.body;
+    if (brand === '' || model === '') {
+        return (0, response_1.errorResponse)(res, 'VALIDATION_ERROR', 'Merek dan Model kendaraan tidak boleh kosong', 422);
+    }
     try {
         const data = yield prisma_1.default.vehicles.update({
             where: { id: Number(id) },

@@ -108,7 +108,7 @@ const options = {
                 // ────────────── Vehicle ──────────────
                 VehicleRequest: {
                     type: 'object',
-                    required: ['plate_number', 'type'],
+                    required: ['plate_number', 'type', 'brand', 'model'],
                     properties: {
                         plate_number: { type: 'string', example: 'B 1234 XY' },
                         type: { type: 'string', enum: ['mobil', 'motor'], example: 'mobil' },
@@ -223,7 +223,13 @@ const options = {
                     properties: {
                         customer_id: { type: 'integer', example: 1 },
                         vehicle_id: { type: 'integer', example: 1 },
-                        layanan: { type: 'string', example: 'Ganti Oli + Tune Up' },
+                        layanan: {
+                            oneOf: [
+                                { type: 'string', example: 'Ganti Oli' },
+                                { type: 'array', items: { type: 'string' }, example: ['Ganti Oli', 'Tune Up'] }
+                            ],
+                            description: 'Jenis layanan. Bisa berupa string tunggal atau array string (multiple select).'
+                        },
                         keluhan: { type: 'string', example: 'Mesin bunyi kasar saat pagi hari' },
                         estimasi_biaya: { type: 'number', example: 350000 },
                         estimasi_selesai: { type: 'string', example: '2026-03-07' },

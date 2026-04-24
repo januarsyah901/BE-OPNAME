@@ -70,8 +70,8 @@ model vehicles {
   customer_id  Int
   plate_number String         @unique @db.VarChar(20)
   type         String         @db.VarChar(10)
-  brand        String?        @db.VarChar(100)
-  model        String?        @db.VarChar(100)
+  brand        String         @default("Unknown") @db.VarChar(100)
+  model        String         @default("Unit") @db.VarChar(100)
   year         Int?           @db.SmallInt
   frame_number String?        @db.VarChar(50)
   created_at   DateTime       @default(now()) @db.Timestamptz(6)
