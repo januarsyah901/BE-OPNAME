@@ -66,7 +66,7 @@ export const login = async (req: Request, res: Response) => {
                 token,
                 refresh_token: refreshToken,
                 expires_in: 900, // 15 menit (dalam detik)
-                user: { id: user.id, name: user.name, username: user.username, role: user.role }
+                user: { id: user.id, name: user.name, username: user.username, role: user.role, phone: user.phone }
             },
             message: 'OK'
         });
@@ -90,7 +90,7 @@ export const me = async (req: Request, res: Response) => {
 
         const user = await prisma.users.findFirst({
             where: { id: decoded.id, deleted_at: null },
-            select: { id: true, name: true, username: true, role: true }
+            select: { id: true, name: true, username: true, role: true, phone: true }
         });
 
         if (!user) {
