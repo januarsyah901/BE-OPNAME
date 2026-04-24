@@ -7,4 +7,5 @@ router.post('/login', authController_1.login);
 router.post('/refresh', authController_1.refresh);
 router.post('/logout', authController_1.logout);
 router.get('/me', authController_1.me);
+router.put('/me', authController_1.updateMe);
 exports.default = router;

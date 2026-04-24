@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.refresh = exports.logout = exports.me = exports.login = void 0;
+exports.updateMe = exports.refresh = exports.logout = exports.me = exports.login = void 0;
 const prisma_1 = __importDefault(require("../config/prisma"));
 const env_1 = require("../config/env");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -65,7 +65,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 token,
                 refresh_token: refreshToken,
                 expires_in: 900, // 15 menit (dalam detik)
-                user: { id: user.id, name: user.name, username: user.username, role: user.role }
+                user: { id: user.id, name: user.name, username: user.username, role: user.role, phone: user.phone }
             },
             message: 'OK'
         });
@@ -88,7 +88,7 @@ const me = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const decoded = jsonwebtoken_1.default.verify(token, env_1.config.jwtSecret || 'supersecretkey');
         const user = yield prisma_1.default.users.findFirst({
             where: { id: decoded.id, deleted_at: null },
-            select: { id: true, name: true, username: true, role: true }
+            select: { id: true, name: true, username: true, role: true, phone: true }
         });
         if (!user) {
             return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid user' } });
@@ -162,3 +162,29 @@ const refresh = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.refresh = refresh;
+const updateMe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Token missing' } });
+        }
+        const token = authHeader.split(' ')[1];
+        const decoded = jsonwebtoken_1.default.verify(token, env_1.config.jwtSecret || 'supersecretkey');
+        const { phone, password } = req.body;
+        const updateData = {};
+        if (phone !== undefined)
+            updateData.phone = phone || null;
+        if (password)
+            updateData.password_hash = bcryptjs_1.default.hashSync(password, 10);
+        const updatedUser = yield prisma_1.default.users.update({
+            where: { id: decoded.id },
+            data: updateData,
+            select: { id: true, name: true, username: true, role: true, phone: true }
+        });
+        return res.status(200).json({ success: true, data: { user: updatedUser }, message: 'Profile updated successfully' });
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
+    }
+});
+exports.updateMe = updateMe;
