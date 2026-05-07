@@ -31,6 +31,12 @@ async function seedAuthOnly() {
       password: "kasir123",
       role: "kasir",
     },
+    {
+      name: "Mekanik",
+      username: "mekanik",
+      password: "mekanik123",
+      role: "mekanik",
+    },
   ];
 
   for (const u of users) {
